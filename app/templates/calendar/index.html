@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block title %}Mi calendario{% endblock %}
+
+{% block content %}
+  <div class="card card--big">
+    <h1 class="h1">Mi calendario</h1>
+
+    {% if not connected %}
+      <div class="callout callout--warn">
+        <div>⚠️ Google Calendar aún no está conectado (MVP).</div>
+        <div class="muted small">Cuando tengas CLIENT_ID/SECRET, implementamos OAuth completo.</div>
+      </div>
+    {% else %}
+      <div class="callout callout--ok">✅ Conectado.</div>
+    {% endif %}
+  </div>
+{% endblock %}

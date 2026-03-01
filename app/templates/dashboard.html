@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block title %}Dashboard{% endblock %}
+
+{% block content %}
+  <div class="card card--big">
+    <div class="page-head">
+      <h1 class="h1">Dashboard</h1>
+      <p class="muted">Resumen del repositorio y vencimientos próximos.</p>
+    </div>
+
+    <div class="stats">
+      <div class="stat">
+        <div class="stat__label">Total de Documentos</div>
+        <div class="stat__value">{{ total_docs }}</div>
+      </div>
+      <div class="stat">
+        <div class="stat__label">Categorías</div>
+        <div class="stat__value">{{ total_cats }}</div>
+      </div>
+      <div class="stat">
+        <div class="stat__label">Espacio Usado (MB)</div>
+        <div class="stat__value">{{ used_mb }}</div>
+      </div>
+      <div class="stat">
+        <div class="stat__label">Último Documento</div>
+        <div class="stat__value">{{ last_doc_name }}</div>
+      </div>
+    </div>
+
+    <hr class="hr" />
+
+    <h2 class="h2">Vencimientos (próx. 7 días)</h2>
+
+    {% if not gc_connected %}
+      <div class="callout callout--warn">
+        <div class="callout__text">
+          <strong>⚠️ Google Calendar no conectado.</strong>
+          <div class="muted">Conéctalo para ver recordatorios y vencimientos en tu dashboard.</div>
+        </div>
+        <a class="btn btn--small" href="{{ url_for('calendar.connect') }}">Conectar Google Calendar</a>
+      </div>
+    {% else %}
+      <div class="callout callout--ok">
+        <div class="callout__text">
+          <strong>✅ Google Calendar conectado.</strong>
+          <div class="muted">Tus eventos y vencimientos se sincronizan con tu cuenta.</div>
+        </div>
+        <a class="btn btn--ghost btn--small" href="{{ url_for('calendar.index') }}">Ver mi calendario</a>
+      </div>
+    {% endif %}
+
+    {# Si después agregas lista de eventos, puedes renderizarla aquí #}
+  </div>
+{% endblock %}

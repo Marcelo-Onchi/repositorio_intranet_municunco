@@ -1,0 +1,73 @@
+# =========================
+# PYTHON
+# =========================
+__pycache__/
+*.py[cod]
+*.pyd
+*.pyo
+*.pkl
+*.log
+*.tmp
+
+# =========================
+# ENTORNOS VIRTUALES
+# =========================
+venv/
+.venv/
+env/
+ENV/
+
+# =========================
+# VARIABLES DE ENTORNO
+# =========================
+.env
+.env.*
+!.env.example
+
+# =========================
+# BASES DE DATOS
+# =========================
+*.sqlite
+*.sqlite3
+*.db
+local.db
+
+# =========================
+# FLASK / INSTANCE
+# =========================
+instance/
+
+# =========================
+# UPLOADS (DOCUMENTOS)
+# =========================
+uploads/
+app/uploads/
+
+# =========================
+# IDE
+# =========================
+.vscode/
+.idea/
+
+# =========================
+# SISTEMA OPERATIVO
+# =========================
+.DS_Store
+Thumbs.db
+
+# =========================
+# BUILD / CACHES
+# =========================
+dist/
+build/
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+
+# =========================
+# LOGS
+# =========================
+*.log
+logs/

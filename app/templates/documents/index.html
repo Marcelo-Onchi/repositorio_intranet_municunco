@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% block title %}Explorar{% endblock %}
+
+{% block content %}
+  <div class="card card--big">
+    <h1 class="h1">Explorar documentos</h1>
+
+    {% if docs %}
+      <div class="table">
+        <div class="table__row table__head">
+          <div>Nombre</div>
+          <div>Categoría</div>
+          <div>Fecha</div>
+          <div>Tamaño</div>
+          <div></div>
+        </div>
+
+        {% for d in docs %}
+          <div class="table__row">
+            <div class="strong">{{ d.name }}</div>
+            <div class="muted">{{ d.category.name if d.category else "—" }}</div>
+            <div class="muted">{{ d.created_at.strftime("%d-%m-%Y %H:%M") }}</div>
+            <div class="muted">{{ (d.file_size / 1024)|round(1) }} KB</div>
+            <div class="right">
+              <a class="btn btn--small" href="{{ url_for('documents.download', doc_id=d.id) }}">Descargar</a>
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+    {% else %}
+      <p class="muted">Aún no hay documentos subidos.</p>
+    {% endif %}
+  </div>
+{% endblock %}

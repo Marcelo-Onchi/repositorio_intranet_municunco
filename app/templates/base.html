@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{% block title %}Repositorio Municunco{% endblock %}</title>
+
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/base.css') }}" />
+    <script defer src="{{ url_for('static', filename='js/base.js') }}"></script>
+
+    {% block extra_head %}{% endblock %}
+  </head>
+  <body>
+    <a class="skip-link" href="#main">Saltar al contenido</a>
+
+    <header class="topbar">
+      <div class="topbar__inner container">
+        <div class="brand">
+          <div class="brand__icon" aria-hidden="true">📁</div>
+          <div class="brand__text">
+            <div class="brand__title">Repositorio de Documentos</div>
+            <div class="brand__subtitle">Sistema Municipal de Gestión de Documentos</div>
+          </div>
+        </div>
+
+        <div class="topbar__right">
+          {% if current_user.is_authenticated %}
+            <div class="pill" title="{{ current_user.email }}">
+              <span class="dot" aria-hidden="true"></span>
+              <span class="pill__email">{{ current_user.email }}</span>
+              {% if current_user.is_admin %}
+                <span class="pill__tag" aria-label="Administrador">ADMIN</span>
+              {% endif %}
+            </div>
+          {% endif %}
+        </div>
+      </div>
+    </header>
+
+    <main id="main" class="page">
+      <div class="container">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+          {% if messages %}
+            <div class="alerts" role="status" aria-live="polite">
+              {% for category, message in messages %}
+                {# categorías típicas: success, error, warning, info #}
+                <div class="alert alert--{{ category|e }}">
+                  <div class="alert__icon" aria-hidden="true"></div>
+                  <div class="alert__text">{{ message }}</div>
+                </div>
+              {% endfor %}
+            </div>
+          {% endif %}
+        {% endwith %}
+
+        <div class="layout">
+          <aside class="sidebar" aria-label="Menú lateral">
+            <div class="card">
+              <div class="card__title">MENÚ</div>
+
+              <nav class="nav">
+                {% if current_user.is_authenticated %}
+                  <a class="nav__item" href="{{ url_for('documents.dashboard') }}">📊 Dashboard</a>
+                  <a class="nav__item" href="{{ url_for('documents.upload') }}">📤 Subir Documento</a>
+                  <a class="nav__item" href="{{ url_for('documents.index') }}">📁 Explorar</a>
+                  <a class="nav__item" href="{{ url_for('calendar.index') }}">🗓️ Mi calendario</a>
+
+                  {% if current_user.is_admin %}
+                    <a class="nav__item" href="{{ url_for('admin.index') }}">🛡️ Admin</a>
+                  {% endif %}
+
+                  <div class="nav__sep" role="separator" aria-hidden="true"></div>
+                  <a class="nav__item nav__item--danger" href="{{ url_for('auth.logout') }}">🚪 Logout</a>
+                {% else %}
+                  <a class="nav__item" href="{{ url_for('auth.login') }}">🔐 Login</a>
+                  <div class="nav__hint">Inicia sesión para acceder al repositorio.</div>
+                {% endif %}
+              </nav>
+            </div>
+          </aside>
+
+          <section class="content" aria-label="Contenido principal">
+            {% block content %}{% endblock %}
+          </section>
+        </div>
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="container">
+        © 2026 Municipalidad de Cunco | Sistema de Repositorio de Documentos | Desarrollo IT
+      </div>
+    </footer>
+
+    {% block extra_scripts %}{% endblock %}
+  </body>
+</html>

@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block title %}Subir Documento{% endblock %}
+
+{% block content %}
+  <div class="card card--big">
+    <h1 class="h1">Subir documento</h1>
+
+    <form method="POST" action="{{ url_for('documents.upload_post') }}" enctype="multipart/form-data" class="form">
+      <label class="label">Nombre del documento</label>
+      <input class="input" name="name" placeholder="Ej: Informe mensual, Decreto, Acta..." required />
+
+      <label class="label">Categoría</label>
+      <select class="input" name="category_id">
+        <option value="">— Sin categoría —</option>
+        {% for c in cats %}
+          <option value="{{ c.id }}">{{ c.name }}</option>
+        {% endfor %}
+      </select>
+
+      <label class="label">Archivo</label>
+      <input class="input" type="file" name="file" required />
+
+      <button class="btn" type="submit">Subir</button>
+    </form>
+  </div>
+{% endblock %}

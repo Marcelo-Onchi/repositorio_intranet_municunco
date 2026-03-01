@@ -1,0 +1,7 @@
+from __future__ import annotations
+
+from flask import Blueprint
+
+bp = Blueprint("documents", __name__, url_prefix="/documents")
+
+from . import routes  # noqa: E402,F401

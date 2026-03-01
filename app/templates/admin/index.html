@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block title %}Admin{% endblock %}
+
+{% block content %}
+  <div class="card card--big">
+    <h1 class="h1">Admin</h1>
+    <div class="grid">
+      <a class="card linkcard" href="{{ url_for('admin.users') }}">
+        <div class="linkcard__title">👥 Usuarios</div>
+        <div class="muted">Activar / desactivar usuarios.</div>
+      </a>
+      <a class="card linkcard" href="{{ url_for('admin.categories') }}">
+        <div class="linkcard__title">🏷️ Categorías</div>
+        <div class="muted">Crear categorías para ordenar documentos.</div>
+      </a>
+    </div>
+  </div>
+{% endblock %}
