@@ -10,8 +10,9 @@
 
     <form method="POST" action="{{ url_for('auth.login_post') }}" class="form">
       <div class="form__row">
-        <label class="label" for="email">Email</label>
-        <input class="input" id="email" type="email" name="email" value="admin@municunco.cl" autocomplete="username" required />
+        <label class="label" for="username">Usuario</label>
+        <input class="input" id="username" name="username" placeholder="ej: mmontoya" autocomplete="username" required />
+        <div class="muted small">El usuario no lleva @ (el correo se usa solo para registro).</div>
       </div>
 
       <div class="form__row">
@@ -20,7 +21,14 @@
       </div>
 
       <button class="btn" type="submit">Entrar</button>
-      <p class="muted small">Admin inicial desde .env (ADMIN_EMAIL / ADMIN_PASSWORD).</p>
+
+      <div class="muted small" style="margin-top:10px;">
+        ¿No tienes cuenta? <a href="{{ url_for('auth.register') }}" style="text-decoration:underline;">Crear usuario</a>
+      </div>
+
+      <p class="muted small" style="margin-top:10px;">
+        Admin inicial desde .env (ADMIN_EMAIL / ADMIN_PASSWORD).
+      </p>
     </form>
   </div>
 {% endblock %}

@@ -2,17 +2,144 @@
 {% block title %}Admin{% endblock %}
 
 {% block content %}
-  <div class="card card--big">
+  <div class="page-head">
     <h1 class="h1">Admin</h1>
-    <div class="grid">
-      <a class="card linkcard" href="{{ url_for('admin.users') }}">
-        <div class="linkcard__title">👥 Usuarios</div>
-        <div class="muted">Activar / desactivar usuarios.</div>
-      </a>
-      <a class="card linkcard" href="{{ url_for('admin.categories') }}">
-        <div class="linkcard__title">🏷️ Categorías</div>
-        <div class="muted">Crear categorías para ordenar documentos.</div>
-      </a>
+    <div class="page-sub">Gestión de usuarios y categorías (solo administradores).</div>
+  </div>
+
+  <div class="stats" style="grid-template-columns: repeat(3, minmax(0, 1fr));">
+    <div class="stat">
+      <div class="stat__label">Usuarios</div>
+      <div class="stat__value">{{ users|length }}</div>
     </div>
+    <div class="stat">
+      <div class="stat__label">Categorías</div>
+      <div class="stat__value">{{ categories|length }}</div>
+    </div>
+    <div class="stat">
+      <div class="stat__label">Tu sesión</div>
+      <div class="stat__value" style="font-size:14px; margin-top:10px;">
+        {{ current_user.username }} (ADMIN)
+      </div>
+    </div>
+  </div>
+
+  <div class="hr"></div>
+
+  <div class="card">
+    <div class="h2">👥 Usuarios</div>
+    <div class="muted" style="margin-top:6px;">Activa/desactiva usuarios y administra permisos.</div>
+
+    <div style="height:12px;"></div>
+
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Usuario</th>
+          <th>Correo</th>
+          <th>Estado</th>
+          <th>Rol</th>
+          <th>Creado</th>
+          <th>Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for u in users %}
+          <tr>
+            <td><strong>{{ u.username }}</strong><div class="help">{{ u.full_name }}</div></td>
+            <td>{{ u.email }}</td>
+            <td>
+              {% if u.is_active %}
+                <span class="badge">✅ Activo</span>
+              {% else %}
+                <span class="badge">⛔ Desactivado</span>
+              {% endif %}
+            </td>
+            <td>
+              {% if u.is_admin %}
+                <span class="badge">🛡️ Admin</span>
+              {% else %}
+                <span class="badge">👤 Usuario</span>
+              {% endif %}
+            </td>
+            <td>{{ u.created_at.strftime("%d-%m-%Y %H:%M") }}</td>
+            <td>
+              <div class="actions">
+                {% if u.id != current_user.id %}
+                  <form method="POST" action="{{ url_for('admin.toggle_user_active', user_id=u.id) }}">
+                    <button class="btn btn--ghost btn--small" type="submit">
+                      {% if u.is_active %}Desactivar{% else %}Activar{% endif %}
+                    </button>
+                  </form>
+
+                  <form method="POST" action="{{ url_for('admin.toggle_user_admin', user_id=u.id) }}">
+                    <button class="btn btn--ghost btn--small" type="submit">
+                      {% if u.is_admin %}Quitar admin{% else %}Hacer admin{% endif %}
+                    </button>
+                  </form>
+                {% else %}
+                  <span class="muted small">Tu cuenta</span>
+                {% endif %}
+              </div>
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <div style="height:12px;"></div>
+
+  <div class="card">
+    <div class="h2">🏷️ Categorías</div>
+    <div class="muted" style="margin-top:6px;">Crea categorías para ordenar documentos.</div>
+
+    <div style="height:12px;"></div>
+
+    <form method="POST" action="{{ url_for('admin.create_category') }}" class="toolbar">
+      <div class="toolbar__left" style="flex:1;">
+        <div class="form__row" style="flex:1; min-width:260px;">
+          <label class="label" for="name">Nueva categoría</label>
+          <input class="input" id="name" name="name" placeholder="Ej: Contratos, Resoluciones, Actas..." required />
+        </div>
+      </div>
+      <div class="toolbar__right">
+        <button class="btn" type="submit">Agregar</button>
+      </div>
+    </form>
+
+    <div style="height:10px;"></div>
+
+    {% if categories %}
+      <table class="table">
+        <thead>
+          <tr>
+            <th>Nombre</th>
+            <th>Creado</th>
+            <th>Acción</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for c in categories %}
+            <tr>
+              <td><strong>{{ c.name }}</strong></td>
+              <td>{{ c.created_at.strftime("%d-%m-%Y %H:%M") if c.created_at else "—" }}</td>
+              <td>
+                <form method="POST" action="{{ url_for('admin.delete_category', cat_id=c.id) }}">
+                  <button class="btn btn--danger btn--small" type="submit"
+                    onclick="return confirm('¿Eliminar la categoría {{ c.name }}?')">
+                    Eliminar
+                  </button>
+                </form>
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    {% else %}
+      <div class="center" style="padding:14px;">
+        <div class="muted">Aún no hay categorías.</div>
+      </div>
+    {% endif %}
   </div>
 {% endblock %}

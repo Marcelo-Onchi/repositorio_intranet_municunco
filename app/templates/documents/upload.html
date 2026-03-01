@@ -2,25 +2,53 @@
 {% block title %}Subir Documento{% endblock %}
 
 {% block content %}
+  <div class="page-head">
+    <h1 class="h1">Subir documentos</h1>
+    <div class="page-sub">Carga uno o varios archivos. Se guardan en el servidor y quedan disponibles para el equipo.</div>
+  </div>
+
   <div class="card card--big">
-    <h1 class="h1">Subir documento</h1>
+    <form class="form" method="POST" action="{{ url_for('documents.upload_post') }}" enctype="multipart/form-data">
+      <div class="form__grid">
+        <div class="form__row">
+          <label class="label" for="category_id">Categoría</label>
+          <select class="input" id="category_id" name="category_id">
+            <option value="">(Sin categoría)</option>
+            {% for c in categories %}
+              <option value="{{ c.id }}">{{ c.name }}</option>
+            {% endfor %}
+          </select>
+          <div class="help">Opcional. Puedes ordenar documentos por categoría.</div>
+        </div>
 
-    <form method="POST" action="{{ url_for('documents.upload_post') }}" enctype="multipart/form-data" class="form">
-      <label class="label">Nombre del documento</label>
-      <input class="input" name="name" placeholder="Ej: Informe mensual, Decreto, Acta..." required />
+        <div class="form__row">
+          <label class="label">Estado</label>
+          <div class="badge">📎 Subida múltiple habilitada</div>
+          <div class="help">Puedes arrastrar y soltar archivos o seleccionarlos.</div>
+        </div>
+      </div>
 
-      <label class="label">Categoría</label>
-      <select class="input" name="category_id">
-        <option value="">— Sin categoría —</option>
-        {% for c in cats %}
-          <option value="{{ c.id }}">{{ c.name }}</option>
-        {% endfor %}
-      </select>
+      <div class="dropzone" data-dropzone>
+        <div>
+          <div class="dropzone__title">📤 Arrastra archivos aquí</div>
+          <div class="dropzone__sub">o haz clic para seleccionar. (PDF, Office, imágenes, ZIP, etc.)</div>
+        </div>
+        <div class="dropzone__right">
+          <div class="dropzone__count" data-file-count>0 archivos</div>
+          <button class="btn btn--ghost btn--small" type="button">Seleccionar</button>
+        </div>
+      </div>
 
-      <label class="label">Archivo</label>
-      <input class="input" type="file" name="file" required />
+      <input class="input" type="file" name="files" data-file-input multiple required />
 
-      <button class="btn" type="submit">Subir</button>
+      <div class="actions" style="justify-content:flex-end;">
+        <a class="btn btn--ghost" href="{{ url_for('documents.index') }}">Volver</a>
+        <button class="btn" type="submit">Subir</button>
+      </div>
+
+      <div class="help">
+        Tip: si un archivo no se sube, revisa la extensión permitida en <code>Config.ALLOWED_EXTENSIONS</code>.
+      </div>
     </form>
   </div>
 {% endblock %}

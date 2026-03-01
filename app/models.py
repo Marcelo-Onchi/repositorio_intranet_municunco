@@ -13,14 +13,26 @@ from .extensions import db, login_manager
 def load_user(user_id: str) -> Optional["User"]:
     if not user_id:
         return None
-    return db.session.get(User, int(user_id))
+    try:
+        return db.session.get(User, int(user_id))
+    except Exception:
+        return None
 
 
 class User(db.Model, UserMixin):
+    """
+    Usuario del sistema.
+
+    Reglas:
+    - Login por username (sin @)
+    - Registro exige username + email + full_name + password
+    """
+
     __tablename__ = "user"
 
     id = db.Column(db.Integer, primary_key=True)
 
+    username = db.Column(db.String(32), unique=True, index=True, nullable=False)
     email = db.Column(db.String(120), unique=True, index=True, nullable=False)
     full_name = db.Column(db.String(120), nullable=False)
 
@@ -30,6 +42,14 @@ class User(db.Model, UserMixin):
     is_active = db.Column(db.Boolean, default=True, nullable=False)
 
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+
+    # Relación: documentos subidos por el usuario (útil para admin/reportes)
+    documents = db.relationship(
+        "Document",
+        back_populates="uploaded_by",
+        lazy="select",
+        cascade="all, delete-orphan",
+    )
 
     def set_password(self, raw: str) -> None:
         self.password_hash = generate_password_hash(raw)
@@ -45,6 +65,13 @@ class Category(db.Model):
     name = db.Column(db.String(120), unique=True, nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
 
+    # ✅ NUEVO: relación Category -> Document
+    documents = db.relationship(
+        "Document",
+        back_populates="category",
+        lazy="select",
+    )
+
 
 class Document(db.Model):
     __tablename__ = "document"
@@ -59,7 +86,7 @@ class Document(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
 
     category_id = db.Column(db.Integer, db.ForeignKey("category.id"), nullable=True)
-    category = db.relationship("Category", lazy="joined")
+    category = db.relationship("Category", back_populates="documents", lazy="joined")
 
     uploaded_by_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
-    uploaded_by = db.relationship("User", lazy="joined")
+    uploaded_by = db.relationship("User", back_populates="documents", lazy="joined")

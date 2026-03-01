@@ -1,17 +1,103 @@
 {% extends "base.html" %}
 {% block title %}Mi calendario{% endblock %}
 
-{% block content %}
-  <div class="card card--big">
-    <h1 class="h1">Mi calendario</h1>
+{% block extra_head %}
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+{% endblock %}
 
-    {% if not connected %}
+{% block content %}
+  <div class="page-head">
+    <h1 class="h1">Mi calendario</h1>
+    <div class="page-sub">Conecta Google Calendar para crear recordatorios y ver vencimientos.</div>
+  </div>
+
+  <div class="card card--big">
+    {% if not gc_connected %}
       <div class="callout callout--warn">
-        <div>⚠️ Google Calendar aún no está conectado (MVP).</div>
-        <div class="muted small">Cuando tengas CLIENT_ID/SECRET, implementamos OAuth completo.</div>
+        <div class="callout__text">
+          <div class="h2">Google Calendar no conectado</div>
+          <div class="muted">Conéctalo para ver tus eventos y recordatorios en el dashboard.</div>
+        </div>
+        <a class="btn" href="{{ url_for('calendar.connect') }}">Conectar Google Calendar</a>
       </div>
     {% else %}
-      <div class="callout callout--ok">✅ Conectado.</div>
+      <div class="callout callout--ok">
+        <div class="callout__text">
+          <div class="h2">Google Calendar conectado</div>
+          <div class="muted">Ya puedes crear y ver eventos asociados a tu usuario.</div>
+        </div>
+        {# Si tienes disconnect, úsalo. Si no, comenta este botón. #}
+        <a class="btn btn--ghost" href="{{ url_for('calendar.disconnect') }}">Desconectar</a>
+      </div>
     {% endif %}
   </div>
+
+  <div style="height:12px;"></div>
+
+  <div class="card">
+    <form method="GET" class="toolbar">
+      <div class="toolbar__left">
+        <div class="form__row" style="min-width:200px;">
+          <label class="label">Desde</label>
+          <input class="input" name="desde" value="{{ request.args.get('desde','') }}" data-date placeholder="dd-mm-aaaa">
+        </div>
+        <div class="form__row" style="min-width:200px;">
+          <label class="label">Hasta</label>
+          <input class="input" name="hasta" value="{{ request.args.get('hasta','') }}" data-date placeholder="dd-mm-aaaa">
+        </div>
+      </div>
+      <div class="toolbar__right">
+        <button class="btn btn--ghost" type="submit">Filtrar</button>
+      </div>
+    </form>
+
+    <div class="help">
+      Este módulo lo dejamos conectado a tu OAuth real. Luego agregamos: “crear evento” al subir documento y recordatorios en dashboard.
+    </div>
+  </div>
+
+  <div style="height:12px;"></div>
+
+  <div class="card">
+    <div class="h2">Eventos</div>
+    <div class="muted" style="margin-top:6px;">(si ya estás trayendo eventos desde Google, aquí los mostramos)</div>
+
+    <div style="height:12px;"></div>
+
+    {% if events and events|length %}
+      <table class="table">
+        <thead>
+          <tr>
+            <th>Fecha</th>
+            <th>Título</th>
+            <th>Detalle</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for e in events %}
+            <tr>
+              <td>{{ e.start }}</td>
+              <td>{{ e.summary }}</td>
+              <td>{{ e.description or "—" }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    {% else %}
+      <div class="center" style="padding: 16px;">
+        <div class="muted">Sin eventos para el rango seleccionado.</div>
+      </div>
+    {% endif %}
+  </div>
+{% endblock %}
+
+{% block extra_scripts %}
+  <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+  <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/es.js"></script>
+  <script>
+    window.addEventListener("DOMContentLoaded", () => {
+      const opts = { locale: "es", dateFormat: "d-m-Y", allowInput: true };
+      document.querySelectorAll("[data-date]").forEach((el) => flatpickr(el, opts));
+    });
+  </script>
 {% endblock %}

@@ -1,34 +1,142 @@
 {% extends "base.html" %}
-{% block title %}Explorar{% endblock %}
+{% block title %}Explorar Documentos{% endblock %}
+
+{% block extra_head %}
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+{% endblock %}
 
 {% block content %}
-  <div class="card card--big">
+  <div class="page-head">
     <h1 class="h1">Explorar documentos</h1>
+    <div class="page-sub">Busca, filtra por categoría y por rango de fechas (formato Chile).</div>
+  </div>
 
-    {% if docs %}
-      <div class="table">
-        <div class="table__row table__head">
-          <div>Nombre</div>
-          <div>Categoría</div>
-          <div>Fecha</div>
-          <div>Tamaño</div>
-          <div></div>
+  <div class="card">
+    <form method="GET" action="{{ url_for('documents.index') }}" class="toolbar">
+      <div class="toolbar__left">
+        <div class="form__row" style="min-width:260px;">
+          <label class="label" for="q">Buscar</label>
+          <input class="input" id="q" name="q" value="{{ q }}" placeholder="Ej: resolución, contrato, acta..." />
         </div>
 
-        {% for d in docs %}
-          <div class="table__row">
-            <div class="strong">{{ d.name }}</div>
-            <div class="muted">{{ d.category.name if d.category else "—" }}</div>
-            <div class="muted">{{ d.created_at.strftime("%d-%m-%Y %H:%M") }}</div>
-            <div class="muted">{{ (d.file_size / 1024)|round(1) }} KB</div>
-            <div class="right">
-              <a class="btn btn--small" href="{{ url_for('documents.download', doc_id=d.id) }}">Descargar</a>
-            </div>
-          </div>
-        {% endfor %}
+        <div class="form__row" style="min-width:220px;">
+          <label class="label" for="category_id">Categoría</label>
+          <select class="input" id="category_id" name="category_id">
+            <option value="">Todas</option>
+            {% for c in categories %}
+              <option value="{{ c.id }}" {% if category_id == (c.id|string) %}selected{% endif %}>{{ c.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="form__row" style="min-width:160px;">
+          <label class="label" for="desde">Desde</label>
+          <input class="input" id="desde" name="desde" value="{{ desde }}" data-date placeholder="dd-mm-aaaa" />
+        </div>
+
+        <div class="form__row" style="min-width:160px;">
+          <label class="label" for="hasta">Hasta</label>
+          <input class="input" id="hasta" name="hasta" value="{{ hasta }}" data-date placeholder="dd-mm-aaaa" />
+        </div>
       </div>
-    {% else %}
-      <p class="muted">Aún no hay documentos subidos.</p>
-    {% endif %}
+
+      <div class="toolbar__right">
+        <button class="btn btn--ghost" type="submit">Filtrar</button>
+        <a class="btn" href="{{ url_for('documents.upload') }}">Subir</a>
+      </div>
+    </form>
+
+    <div class="badge">📄 {{ docs|length }} documento(s)</div>
   </div>
+
+  <div style="height:12px;"></div>
+
+  {% if docs %}
+    <div class="card">
+      <table class="table">
+        <thead>
+          <tr>
+            <th>Documento</th>
+            <th>Categoría</th>
+            <th>Subido</th>
+            <th>Tamaño</th>
+            <th>Acciones</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for d in docs %}
+            <tr>
+              <td>
+                <span class="file-pill" title="{{ d.filename }}">📄 {{ d.filename }}</span>
+                <div class="help">Nombre interno: {{ d.name }}</div>
+              </td>
+              <td>
+                {% if d.category %}
+                  <span class="badge">🏷️ {{ d.category.name }}</span>
+                {% else %}
+                  <span class="badge">—</span>
+                {% endif %}
+              </td>
+              <td>{{ d.created_at.strftime("%d-%m-%Y %H:%M") }}</td>
+              <td>
+                {% set mb = (d.file_size / 1024 / 1024) %}
+                {{ "%.2f"|format(mb) }} MB
+              </td>
+              <td>
+                <div class="actions">
+                  <button
+                    class="btn btn--ghost btn--small"
+                    type="button"
+                    data-modal-open="{{ url_for('documents.preview', doc_id=d.id) }}"
+                    data-modal-title="{{ d.filename }}"
+                  >
+                    👁️ Vista previa
+                  </button>
+                  <a class="btn btn--ghost btn--small" href="{{ url_for('documents.download', doc_id=d.id) }}">⬇️ Descargar</a>
+
+                  {% if current_user.is_admin %}
+                    <form method="POST" action="{{ url_for('documents.delete', doc_id=d.id) }}" style="display:inline;">
+                      <button class="btn btn--danger btn--small" type="submit" onclick="return confirm('¿Eliminar este documento?')">🗑️</button>
+                    </form>
+                  {% endif %}
+                </div>
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    <div class="card center">
+      <div class="h2">No hay resultados</div>
+      <div class="muted" style="margin-top:6px;">Prueba otro filtro o sube tu primer documento.</div>
+      <div style="margin-top:12px;">
+        <a class="btn" href="{{ url_for('documents.upload') }}">Subir documentos</a>
+      </div>
+    </div>
+  {% endif %}
+
+  <!-- Modal preview -->
+  <div id="previewModal" class="modal" aria-hidden="true">
+    <div class="modal__panel" role="dialog" aria-modal="true" aria-label="Vista previa">
+      <div class="modal__head">
+        <div class="modal__title">Vista previa</div>
+        <button class="modal__close" type="button" data-modal-close aria-label="Cerrar">×</button>
+      </div>
+      <div class="modal__body">
+        <iframe class="modal__frame" src="about:blank" title="Vista previa"></iframe>
+      </div>
+    </div>
+  </div>
+{% endblock %}
+
+{% block extra_scripts %}
+  <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+  <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/es.js"></script>
+  <script>
+    window.addEventListener("DOMContentLoaded", () => {
+      const opts = { locale: "es", dateFormat: "d-m-Y", allowInput: true };
+      document.querySelectorAll("[data-date]").forEach((el) => flatpickr(el, opts));
+    });
+  </script>
 {% endblock %}

@@ -1,84 +1,106 @@
 from __future__ import annotations
 
-from flask import flash, redirect, render_template, request, url_for
-from flask_login import current_user, login_required
+from flask import abort, flash, redirect, render_template, request, url_for
+from flask_login import login_required, current_user
 
 from app.extensions import db
 from app.models import Category, User
 from . import bp
 
 
-def _require_admin() -> bool:
-    if not current_user.is_admin:
-        flash("Acceso restringido (solo admin).", "danger")
-        return False
-    return True
+def _require_admin() -> None:
+    if not current_user.is_authenticated or not current_user.is_admin:
+        abort(403)
 
 
 @bp.get("/")
 @login_required
 def index():
-    if not _require_admin():
-        return redirect(url_for("documents.dashboard"))
-    return render_template("admin/index.html")
+    _require_admin()
 
-
-@bp.get("/users")
-@login_required
-def users():
-    if not _require_admin():
-        return redirect(url_for("documents.dashboard"))
     users = User.query.order_by(User.created_at.desc()).all()
-    return render_template("admin/users.html", users=users)
+    categories = Category.query.order_by(Category.name.asc()).all()
+
+    return render_template("admin/index.html", users=users, categories=categories)
 
 
-@bp.post("/users/toggle/<int:user_id>")
+@bp.post("/users/<int:user_id>/toggle-active")
 @login_required
-def users_toggle(user_id: int):
-    if not _require_admin():
-        return redirect(url_for("documents.dashboard"))
+def toggle_user_active(user_id: int):
+    _require_admin()
 
-    u = db.session.get(User, user_id)
-    if not u:
-        flash("Usuario no encontrado.", "danger")
-        return redirect(url_for("admin.users"))
-
-    if u.id == current_user.id:
+    if current_user.id == user_id:
         flash("No puedes desactivarte a ti mismo.", "warning")
-        return redirect(url_for("admin.users"))
+        return redirect(url_for("admin.index"))
 
-    u.is_active = not u.is_active
+    user = User.query.get_or_404(user_id)
+    user.is_active = not user.is_active
     db.session.commit()
-    flash("Estado actualizado.", "success")
-    return redirect(url_for("admin.users"))
+
+    flash(
+        f"Usuario {'activado' if user.is_active else 'desactivado'}: {user.username}",
+        "success",
+    )
+    return redirect(url_for("admin.index"))
 
 
-@bp.get("/categories")
+@bp.post("/users/<int:user_id>/toggle-admin")
 @login_required
-def categories():
-    if not _require_admin():
-        return redirect(url_for("documents.dashboard"))
-    cats = Category.query.order_by(Category.name.asc()).all()
-    return render_template("admin/categories.html", cats=cats)
+def toggle_user_admin(user_id: int):
+    _require_admin()
+
+    if current_user.id == user_id:
+        flash("No puedes quitarte el rol admin a ti mismo.", "warning")
+        return redirect(url_for("admin.index"))
+
+    user = User.query.get_or_404(user_id)
+    user.is_admin = not user.is_admin
+    db.session.commit()
+
+    flash(
+        f"Permisos admin {'activados' if user.is_admin else 'quitados'} para: {user.username}",
+        "success",
+    )
+    return redirect(url_for("admin.index"))
 
 
-@bp.post("/categories")
+@bp.post("/categories/create")
 @login_required
-def categories_create():
-    if not _require_admin():
-        return redirect(url_for("documents.dashboard"))
+def create_category():
+    _require_admin()
 
     name = (request.form.get("name") or "").strip()
     if not name:
-        flash("Nombre de categoría requerido.", "warning")
-        return redirect(url_for("admin.categories"))
+        flash("Ingresa un nombre de categoría.", "warning")
+        return redirect(url_for("admin.index"))
 
-    exists = Category.query.filter_by(name=name).first()
+    exists = Category.query.filter(db.func.lower(Category.name) == name.lower()).first()
     if exists:
         flash("Esa categoría ya existe.", "warning")
-        return redirect(url_for("admin.categories"))
+        return redirect(url_for("admin.index"))
 
-    db.session.add(Category(name=name))
+    cat = Category(name=name[:120])
+    db.session.add(cat)
     db.session.commit()
-    flash("Categoría creada ✅", "success")
-    return redirect(url_for("admin.categories"))
+
+    flash("Categoría creada.", "success")
+    return redirect(url_for("admin.index"))
+
+
+@bp.post("/categories/<int:cat_id>/delete")
+@login_required
+def delete_category(cat_id: int):
+    _require_admin()
+
+    cat = Category.query.get_or_404(cat_id)
+
+    # Ojo: si hay documentos asociados, mejor no borrar.
+    if cat.documents and len(cat.documents) > 0:  # type: ignore[attr-defined]
+        flash("No puedes eliminar una categoría con documentos asociados.", "warning")
+        return redirect(url_for("admin.index"))
+
+    db.session.delete(cat)
+    db.session.commit()
+
+    flash("Categoría eliminada.", "success")
+    return redirect(url_for("admin.index"))
