@@ -12,7 +12,11 @@ from app.extensions import db
 from app.models import GoogleToken
 
 
-SCOPES = ["https://www.googleapis.com/auth/calendar"]
+def _get_scopes() -> list[str]:
+    scopes = current_app.config.get("GOOGLE_SCOPES") or []
+    if not scopes:
+        scopes = ["https://www.googleapis.com/auth/calendar"]
+    return scopes
 
 
 def _get_credentials(user_id: int) -> Credentials | None:
@@ -20,21 +24,28 @@ def _get_credentials(user_id: int) -> Credentials | None:
     if not token:
         return None
 
+    scopes = _get_scopes()
+
     creds = Credentials(
         token=token.access_token,
         refresh_token=token.refresh_token,
         token_uri="https://oauth2.googleapis.com/token",
         client_id=current_app.config.get("GOOGLE_CLIENT_ID", ""),
         client_secret=current_app.config.get("GOOGLE_CLIENT_SECRET", ""),
-        scopes=SCOPES,
+        scopes=scopes,
     )
 
-    if creds and creds.expired and creds.refresh_token:
-        creds.refresh(Request())
-        token.access_token = creds.token
-        if creds.expiry:
-            token.token_expiry = creds.expiry.replace(tzinfo=None)
-        db.session.commit()
+    # Refresh automático si expiró
+    try:
+        if creds and creds.expired and creds.refresh_token:
+            creds.refresh(Request())
+            token.access_token = creds.token
+            if creds.expiry:
+                token.token_expiry = creds.expiry.replace(tzinfo=None)
+            db.session.commit()
+    except Exception:
+        # Si falla refresh, tratamos como no válido
+        return None
 
     return creds
 
@@ -59,7 +70,7 @@ def list_upcoming_events(user_id: int, days: int = 30, max_results: int = 5) -> 
     ).execute()
 
     items = events_result.get("items", [])
-    out = []
+    out: list[dict[str, Any]] = []
     for ev in items:
         start = ev.get("start", {})
         dt = start.get("dateTime") or start.get("date")
@@ -92,11 +103,12 @@ def list_upcoming_deadlines_7d(user_id: int, days: int = 7) -> list[dict[str, An
     ).execute()
 
     items = events_result.get("items", [])
-    out = []
+    out: list[dict[str, Any]] = []
     for ev in items:
         summary = ev.get("summary", "")
         start = ev.get("start", {})
         dt_str = start.get("dateTime") or start.get("date")
+
         d: date | None = None
         try:
             if dt_str and "T" in dt_str:
@@ -108,7 +120,7 @@ def list_upcoming_deadlines_7d(user_id: int, days: int = 7) -> list[dict[str, An
 
         out.append({
             "id": ev.get("id"),
-            "summary": summary,
+            "summary": summary or "(sin título)",
             "when": dt_str,
             "date": d,
         })

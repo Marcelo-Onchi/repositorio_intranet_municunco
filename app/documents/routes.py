@@ -1,10 +1,11 @@
 from __future__ import annotations
 
 import mimetypes
-from datetime import datetime, time
+from datetime import date, datetime, time, timedelta
 from pathlib import Path
 from typing import Optional
 from uuid import uuid4
+from zoneinfo import ZoneInfo
 
 from flask import (
     abort,
@@ -37,7 +38,19 @@ def _allowed_file(filename: str) -> bool:
     return ext in allowed
 
 
-def _parse_date_ddmmyyyy(raw: str) -> Optional[datetime]:
+def _parse_date_ddmmyyyy_to_date(raw: str) -> Optional[date]:
+    raw = (raw or "").strip()
+    if not raw:
+        return None
+    for fmt in ("%d-%m-%Y", "%Y-%m-%d"):
+        try:
+            return datetime.strptime(raw, fmt).date()
+        except ValueError:
+            continue
+    return None
+
+
+def _parse_date_ddmmyyyy_to_datetime(raw: str) -> Optional[datetime]:
     raw = (raw or "").strip()
     if not raw:
         return None
@@ -49,44 +62,64 @@ def _parse_date_ddmmyyyy(raw: str) -> Optional[datetime]:
     return None
 
 
-def _get_gc_status_and_items() -> tuple[bool, list[dict], list[dict]]:
-    """
-    Retorna:
-      - gc_connected: bool
-      - deadlines_7d: list[dict] (eventos tipo "📌 Subir:" dentro de 7 días)
-      - upcoming_events: list[dict] (próximos eventos generales)
-
-    Best-effort:
-    - Si no existe GoogleToken o falla Google API, no revienta el dashboard.
-    """
-    gc_connected = False
-    deadlines_7d: list[dict] = []
-    upcoming_events: list[dict] = []
-
-    # 1) Detectar token en BD
+def _is_google_connected(user_id: int) -> bool:
     try:
         from app.models import GoogleToken  # type: ignore
 
-        token = GoogleToken.query.filter_by(user_id=current_user.id).first()
-        gc_connected = bool(token)
+        return bool(GoogleToken.query.filter_by(user_id=user_id).first())
     except Exception:
-        gc_connected = False
+        return False
 
-    # 2) Si está conectado, traer info desde tu google_service.py
-    if gc_connected:
+
+def _local_iso_range_for_due_date(d: date) -> tuple[str, str]:
+    """
+    Genera rango ISO con zona horaria local para evento Google.
+    Por defecto: 09:00 a 09:30 hora local.
+    """
+    tzname = current_app.config.get("APP_TIMEZONE", "America/Santiago")
+    tz = ZoneInfo(tzname)
+
+    start_local = datetime(d.year, d.month, d.day, 9, 0, 0, tzinfo=tz)
+    end_local = start_local + timedelta(minutes=30)
+
+    return start_local.isoformat(), end_local.isoformat()
+
+
+def _create_deadline_events_for_docs(docs: list[Document]) -> int:
+    """
+    Crea eventos Google Calendar para docs con due_date.
+    Retorna: cantidad creada correctamente.
+    """
+    created = 0
+    try:
+        from app.calendar_bp.google_service import create_deadline_event
+    except Exception:
+        return 0
+
+    for doc in docs:
+        if not doc.due_date:
+            continue
+
+        start_iso, end_iso = _local_iso_range_for_due_date(doc.due_date)
+
+        ok = False
         try:
-            from app.calendar_bp.google_service import (
-                list_upcoming_deadlines_7d,
-                list_upcoming_events,
+            ok = create_deadline_event(
+                user_id=doc.uploaded_by_id,
+                title=doc.name,
+                description=f"Documento: {doc.filename}\nCategoría: {doc.category.name if doc.category else '—'}",
+                start_iso=start_iso,
+                end_iso=end_iso,
             )
-
-            deadlines_7d = list_upcoming_deadlines_7d(current_user.id, days=7) or []
-            upcoming_events = list_upcoming_events(current_user.id, days=30, max_results=5) or []
         except Exception:
-            deadlines_7d = []
-            upcoming_events = []
+            ok = False
 
-    return gc_connected, deadlines_7d, upcoming_events
+        if ok:
+            # google_service no devuelve id, así que dejamos gc_event_id vacío por ahora
+            # (si luego quieres guardar el id, hay que ajustar google_service para retornarlo)
+            created += 1
+
+    return created
 
 
 # =========================
@@ -106,7 +139,34 @@ def dashboard():
     last_doc = Document.query.order_by(Document.created_at.desc()).first()
     last_doc_name = last_doc.name if last_doc else "Ninguno"
 
-    gc_connected, deadlines_7d, upcoming_events = _get_gc_status_and_items()
+    gc_connected = _is_google_connected(current_user.id)
+
+    deadlines_7d: list[dict] = []
+    upcoming_events: list[dict] = []
+    db_deadlines_7d: list[Document] = []
+
+    today = date.today()
+    until = today + timedelta(days=7)
+
+    if gc_connected:
+        try:
+            from app.calendar_bp.google_service import list_upcoming_deadlines_7d, list_upcoming_events
+
+            deadlines_7d = list_upcoming_deadlines_7d(current_user.id, days=7) or []
+            upcoming_events = list_upcoming_events(current_user.id, days=30, max_results=5) or []
+        except Exception:
+            deadlines_7d = []
+            upcoming_events = []
+    else:
+        # Fallback profesional: mostrar vencimientos guardados en BD
+        db_deadlines_7d = (
+            Document.query.filter(Document.due_date.isnot(None))
+            .filter(Document.due_date >= today)
+            .filter(Document.due_date <= until)
+            .order_by(Document.due_date.asc(), Document.created_at.desc())
+            .limit(15)
+            .all()
+        )
 
     return render_template(
         "dashboard.html",
@@ -117,6 +177,7 @@ def dashboard():
         gc_connected=gc_connected,
         deadlines_7d=deadlines_7d,
         upcoming_events=upcoming_events,
+        db_deadlines_7d=db_deadlines_7d,
     )
 
 
@@ -132,8 +193,8 @@ def index():
     desde_raw = request.args.get("desde") or ""
     hasta_raw = request.args.get("hasta") or ""
 
-    desde_dt = _parse_date_ddmmyyyy(desde_raw)
-    hasta_dt = _parse_date_ddmmyyyy(hasta_raw)
+    desde_dt = _parse_date_ddmmyyyy_to_datetime(desde_raw)
+    hasta_dt = _parse_date_ddmmyyyy_to_datetime(hasta_raw)
 
     query = Document.query
 
@@ -180,6 +241,9 @@ def upload_post():
     category_id_raw = (request.form.get("category_id") or "").strip()
     category_id = int(category_id_raw) if category_id_raw.isdigit() else None
 
+    due_raw = (request.form.get("due_date") or "").strip()
+    due_date = _parse_date_ddmmyyyy_to_date(due_raw)
+
     if not files or all((f is None or not f.filename) for f in files):
         flash("Selecciona al menos un archivo.", "warning")
         return redirect(url_for("documents.upload"))
@@ -189,6 +253,7 @@ def upload_post():
 
     saved = 0
     rejected = 0
+    created_docs: list[Document] = []
 
     for f in files:
         if not f or not f.filename:
@@ -221,8 +286,10 @@ def upload_post():
             file_size=int(size),
             category_id=category_id,
             uploaded_by_id=current_user.id,
+            due_date=due_date,
         )
         db.session.add(doc)
+        created_docs.append(doc)
         saved += 1
 
     db.session.commit()
@@ -231,6 +298,17 @@ def upload_post():
         flash(f"✅ Subida completada: {saved} archivo(s).", "success")
     if rejected:
         flash(f"⚠️ {rejected} archivo(s) rechazado(s) por nombre/extensión.", "warning")
+
+    # Si hay fecha límite y Google conectado, crear eventos
+    if due_date:
+        if _is_google_connected(current_user.id):
+            created_events = _create_deadline_events_for_docs(created_docs)
+            if created_events:
+                flash(f"🗓️ Se crearon {created_events} recordatorio(s) en Google Calendar.", "info")
+            else:
+                flash("No se pudieron crear recordatorios en Google Calendar.", "warning")
+        else:
+            flash("📌 Fecha límite guardada. Conecta Google Calendar para crear recordatorios automáticos.", "info")
 
     return redirect(url_for("documents.index"))
 
@@ -288,7 +366,6 @@ def delete(doc_id: int):
     db.session.delete(doc)
     db.session.commit()
 
-    # borrar archivo (best-effort)
     try:
         if path.exists():
             path.unlink()

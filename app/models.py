@@ -43,7 +43,6 @@ class User(db.Model, UserMixin):
 
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
 
-    # Relación: documentos subidos por el usuario (útil para admin/reportes)
     documents = db.relationship(
         "Document",
         back_populates="uploaded_by",
@@ -65,7 +64,6 @@ class Category(db.Model):
     name = db.Column(db.String(120), unique=True, nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
 
-    # ✅ NUEVO: relación Category -> Document
     documents = db.relationship(
         "Document",
         back_populates="category",
@@ -85,8 +83,47 @@ class Document(db.Model):
 
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
 
+    # Fecha límite opcional (para vencimientos)
+    due_date = db.Column(db.Date, nullable=True)
+
+    # Id del evento de Google (opcional, por si después lo implementamos)
+    gc_event_id = db.Column(db.String(128), nullable=True)
+
     category_id = db.Column(db.Integer, db.ForeignKey("category.id"), nullable=True)
     category = db.relationship("Category", back_populates="documents", lazy="joined")
 
     uploaded_by_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
     uploaded_by = db.relationship("User", back_populates="documents", lazy="joined")
+
+
+class GoogleToken(db.Model):
+    """
+    Token OAuth de Google Calendar por usuario.
+    """
+
+    __tablename__ = "google_token"
+
+    id = db.Column(db.Integer, primary_key=True)
+
+    user_id = db.Column(
+        db.Integer,
+        db.ForeignKey("user.id"),
+        unique=True,
+        nullable=False,
+        index=True,
+    )
+    user = db.relationship("User", lazy="joined")
+
+    access_token = db.Column(db.Text, nullable=False)
+    refresh_token = db.Column(db.Text, nullable=True)
+
+    token_expiry = db.Column(db.DateTime, nullable=True)
+    scopes = db.Column(db.Text, nullable=True)
+
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = db.Column(
+        db.DateTime,
+        default=datetime.utcnow,
+        onupdate=datetime.utcnow,
+        nullable=False,
+    )

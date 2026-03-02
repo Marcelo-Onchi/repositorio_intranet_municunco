@@ -1,54 +1,104 @@
 {% extends "base.html" %}
-{% block title %}Subir Documento{% endblock %}
+{% block title %}Subir documentos{% endblock %}
+
+{% block extra_head %}
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+{% endblock %}
 
 {% block content %}
-  <div class="page-head">
-    <h1 class="h1">Subir documentos</h1>
-    <div class="page-sub">Carga uno o varios archivos. Se guardan en el servidor y quedan disponibles para el equipo.</div>
-  </div>
-
   <div class="card card--big">
-    <form class="form" method="POST" action="{{ url_for('documents.upload_post') }}" enctype="multipart/form-data">
+    <div class="page-head">
+      <h1 class="h1">Subir documentos</h1>
+      <p class="muted">
+        Carga uno o varios archivos. Si defines <strong>fecha límite</strong>, se guardará y (si está conectado)
+        se creará el recordatorio en Google Calendar.
+      </p>
+    </div>
+
+    <form class="form" method="post" enctype="multipart/form-data" action="{{ url_for('documents.upload_post') }}">
       <div class="form__grid">
         <div class="form__row">
-          <label class="label" for="category_id">Categoría</label>
-          <select class="input" id="category_id" name="category_id">
-            <option value="">(Sin categoría)</option>
+          <label class="label">Categoría (opcional)</label>
+          <select class="input" name="category_id">
+            <option value="">— Sin categoría —</option>
             {% for c in categories %}
               <option value="{{ c.id }}">{{ c.name }}</option>
             {% endfor %}
           </select>
-          <div class="help">Opcional. Puedes ordenar documentos por categoría.</div>
+          <div class="help">Se aplica a todos los archivos de esta subida.</div>
         </div>
 
         <div class="form__row">
-          <label class="label">Estado</label>
-          <div class="badge">📎 Subida múltiple habilitada</div>
-          <div class="help">Puedes arrastrar y soltar archivos o seleccionarlos.</div>
+          <label class="label">Fecha límite (opcional)</label>
+
+          <div style="display:flex; gap:8px; align-items:center;">
+            <input
+              class="input"
+              name="due_date"
+              id="due_date"
+              placeholder="dd-mm-aaaa"
+              data-due-date
+              inputmode="numeric"
+              autocomplete="off"
+            />
+            <button class="btn btn--ghost btn--small" type="button" id="due_clear">
+              Limpiar
+            </button>
+          </div>
+
+          <div class="help">
+            No permite fechas pasadas. Si Google Calendar está conectado, se crea evento
+            <strong>“📌 Subir: …”</strong> a las 09:00 (hora local).
+          </div>
         </div>
       </div>
+
+      <input type="file" name="files" multiple class="input" style="display:none" data-file-input>
 
       <div class="dropzone" data-dropzone>
         <div>
-          <div class="dropzone__title">📤 Arrastra archivos aquí</div>
-          <div class="dropzone__sub">o haz clic para seleccionar. (PDF, Office, imágenes, ZIP, etc.)</div>
+          <div class="dropzone__title">Arrastra archivos aquí o haz clic para seleccionar</div>
+          <div class="dropzone__sub">Permitidos: PDF/DOCX/XLSX/PNG/JPG/ZIP (según configuración)</div>
         </div>
         <div class="dropzone__right">
-          <div class="dropzone__count" data-file-count>0 archivos</div>
-          <button class="btn btn--ghost btn--small" type="button">Seleccionar</button>
+          <span class="dropzone__count" data-file-count>0 archivos</span>
+          <span class="badge">MULTI</span>
         </div>
       </div>
 
-      <input class="input" type="file" name="files" data-file-input multiple required />
-
-      <div class="actions" style="justify-content:flex-end;">
-        <a class="btn btn--ghost" href="{{ url_for('documents.index') }}">Volver</a>
+      <div class="actions">
         <button class="btn" type="submit">Subir</button>
-      </div>
-
-      <div class="help">
-        Tip: si un archivo no se sube, revisa la extensión permitida en <code>Config.ALLOWED_EXTENSIONS</code>.
+        <a class="btn btn--ghost" href="{{ url_for('documents.index') }}">Volver</a>
       </div>
     </form>
   </div>
+{% endblock %}
+
+{% block extra_scripts %}
+  <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+  <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/es.js"></script>
+  <script>
+    window.addEventListener("DOMContentLoaded", () => {
+      // Fecha límite: sin días pasados
+      const dueInput = document.querySelector("[data-due-date]");
+      if (dueInput) {
+        flatpickr(dueInput, {
+          locale: "es",
+          dateFormat: "d-m-Y",
+          allowInput: true,
+          minDate: "today"
+        });
+      }
+
+      // Botón limpiar
+      const clearBtn = document.querySelector("#due_clear");
+      if (clearBtn && dueInput) {
+        clearBtn.addEventListener("click", () => {
+          const inst = dueInput._flatpickr;
+          if (inst) inst.clear();
+          dueInput.value = "";
+        });
+      }
+    });
+  </script>
 {% endblock %}

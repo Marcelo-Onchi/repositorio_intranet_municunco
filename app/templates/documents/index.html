@@ -24,7 +24,9 @@
           <select class="input" id="category_id" name="category_id">
             <option value="">Todas</option>
             {% for c in categories %}
-              <option value="{{ c.id }}" {% if category_id == (c.id|string) %}selected{% endif %}>{{ c.name }}</option>
+              <option value="{{ c.id }}" {% if category_id == (c.id|string) %}selected{% endif %}>
+                {{ c.name }}
+              </option>
             {% endfor %}
           </select>
         </div>
@@ -59,6 +61,7 @@
             <th>Documento</th>
             <th>Categoría</th>
             <th>Subido</th>
+            <th>Vence</th>
             <th>Tamaño</th>
             <th>Acciones</th>
           </tr>
@@ -70,6 +73,7 @@
                 <span class="file-pill" title="{{ d.filename }}">📄 {{ d.filename }}</span>
                 <div class="help">Nombre interno: {{ d.name }}</div>
               </td>
+
               <td>
                 {% if d.category %}
                   <span class="badge">🏷️ {{ d.category.name }}</span>
@@ -77,11 +81,57 @@
                   <span class="badge">—</span>
                 {% endif %}
               </td>
+
               <td>{{ d.created_at.strftime("%d-%m-%Y %H:%M") }}</td>
+
+              <td>
+                {% if d.due_date %}
+                  {% set today = d.due_date.__class__.today() %}
+                  {% set diff = (d.due_date - today).days %}
+
+                  {% if diff < 0 %}
+                    <span
+                      class="badge"
+                      title="Vencido hace {{ (diff * -1) }} día(s)"
+                      style="background:rgba(220,38,38,.12); border-color:rgba(220,38,38,.35); color:#b91c1c;"
+                    >
+                      🔴 {{ d.due_date.strftime("%d-%m-%Y") }}
+                    </span>
+                  {% elif diff == 0 %}
+                    <span
+                      class="badge"
+                      title="Vence hoy"
+                      style="background:rgba(234,88,12,.12); border-color:rgba(234,88,12,.35); color:#c2410c;"
+                    >
+                      🟠 {{ d.due_date.strftime("%d-%m-%Y") }}
+                    </span>
+                  {% elif diff <= 7 %}
+                    <span
+                      class="badge"
+                      title="Faltan {{ diff }} día(s)"
+                      style="background:rgba(234,88,12,.12); border-color:rgba(234,88,12,.35); color:#c2410c;"
+                    >
+                      🟠 {{ d.due_date.strftime("%d-%m-%Y") }}
+                    </span>
+                  {% else %}
+                    <span
+                      class="badge"
+                      title="Faltan {{ diff }} día(s)"
+                      style="background:rgba(22,163,74,.12); border-color:rgba(22,163,74,.35); color:#15803d;"
+                    >
+                      🟢 {{ d.due_date.strftime("%d-%m-%Y") }}
+                    </span>
+                  {% endif %}
+                {% else %}
+                  <span class="badge" title="Sin fecha límite">—</span>
+                {% endif %}
+              </td>
+
               <td>
                 {% set mb = (d.file_size / 1024 / 1024) %}
                 {{ "%.2f"|format(mb) }} MB
               </td>
+
               <td>
                 <div class="actions">
                   <button

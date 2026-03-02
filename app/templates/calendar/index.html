@@ -12,11 +12,19 @@
   </div>
 
   <div class="card card--big">
-    {% if not gc_connected %}
+    {% if not connected %}
       <div class="callout callout--warn">
         <div class="callout__text">
           <div class="h2">Google Calendar no conectado</div>
-          <div class="muted">Conéctalo para ver tus eventos y recordatorios en el dashboard.</div>
+          <div class="muted">
+            Conéctalo para ver tus eventos y recordatorios en el dashboard.
+            {% if redirect_uri %}
+              <div style="margin-top:6px;">
+                <span class="muted">Redirect URI:</span>
+                <span style="font-weight:900;">{{ redirect_uri }}</span>
+              </div>
+            {% endif %}
+          </div>
         </div>
         <a class="btn" href="{{ url_for('calendar.connect') }}">Conectar Google Calendar</a>
       </div>
@@ -26,8 +34,11 @@
           <div class="h2">Google Calendar conectado</div>
           <div class="muted">Ya puedes crear y ver eventos asociados a tu usuario.</div>
         </div>
-        {# Si tienes disconnect, úsalo. Si no, comenta este botón. #}
-        <a class="btn btn--ghost" href="{{ url_for('calendar.disconnect') }}">Desconectar</a>
+
+        {# Desconectar debe ser POST #}
+        <form method="post" action="{{ url_for('calendar.disconnect') }}">
+          <button class="btn btn--ghost" type="submit">Desconectar</button>
+        </form>
       </div>
     {% endif %}
   </div>
@@ -52,7 +63,7 @@
     </form>
 
     <div class="help">
-      Este módulo lo dejamos conectado a tu OAuth real. Luego agregamos: “crear evento” al subir documento y recordatorios en dashboard.
+      Este módulo usa OAuth real. Próximo paso recomendado: crear automáticamente “📌 Subir: …” al subir documentos con fecha.
     </div>
   </div>
 
@@ -60,33 +71,37 @@
 
   <div class="card">
     <div class="h2">Eventos</div>
-    <div class="muted" style="margin-top:6px;">(si ya estás trayendo eventos desde Google, aquí los mostramos)</div>
+    <div class="muted" style="margin-top:6px;">Eventos próximos (o del rango filtrado si lo estás usando en el route).</div>
 
     <div style="height:12px;"></div>
 
-    {% if events and events|length %}
-      <table class="table">
-        <thead>
-          <tr>
-            <th>Fecha</th>
-            <th>Título</th>
-            <th>Detalle</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for e in events %}
-            <tr>
-              <td>{{ e.start }}</td>
-              <td>{{ e.summary }}</td>
-              <td>{{ e.description or "—" }}</td>
-            </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    {% else %}
+    {% if not connected %}
       <div class="center" style="padding: 16px;">
-        <div class="muted">Sin eventos para el rango seleccionado.</div>
+        <div class="muted">Conecta Google Calendar para cargar eventos.</div>
       </div>
+    {% else %}
+      {% if events and events|length %}
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Cuándo</th>
+              <th>Título</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for e in events %}
+              <tr>
+                <td>{{ e.when or "—" }}</td>
+                <td style="font-weight:900;">{{ e.summary or "(sin título)" }}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      {% else %}
+        <div class="center" style="padding: 16px;">
+          <div class="muted">Sin eventos para el rango seleccionado.</div>
+        </div>
+      {% endif %}
     {% endif %}
   </div>
 {% endblock %}
