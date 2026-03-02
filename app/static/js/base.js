@@ -1,60 +1,28 @@
 // base.js — UI helpers (Municunco)
-// - Menú activo (fallback si el server no lo marcó)
 // - Toasts (cerrar + autocerrar)
 // - Modal preview
-// - Dropzone (si existe)
+// - Dropzone
+// - Confirm modal PRO
+// Nota: el menú activo lo marca el servidor (Jinja) para evitar duplicados.
 
 (function () {
   "use strict";
 
   // =========================
-  // Menú activo automático
-  // =========================
-  function setActiveNav() {
-    const navItems = Array.from(document.querySelectorAll(".nav__item[href]"));
-    if (navItems.length === 0) return;
-
-    // Si el server (Jinja) ya marcó alguno, no tocamos nada.
-    const alreadyActive = navItems.some((a) => a.classList.contains("is-active"));
-    if (alreadyActive) return;
-
-    const current = window.location.pathname;
-
-    // Buscar el match más específico (href más largo)
-    let best = null;
-    let bestLen = -1;
-
-    for (const a of navItems) {
-      const href = a.getAttribute("href");
-      if (!href) continue;
-
-      // No marcar logout ni anchors
-      if (href.includes("logout") || href.startsWith("#")) continue;
-
-      // Normalizar: sin trailing slash (excepto root)
-      const cleanHref = href !== "/" ? href.replace(/\/+$/, "") : "/";
-      const cleanCurrent = current !== "/" ? current.replace(/\/+$/, "") : "/";
-
-      const isRoot = cleanHref === "/";
-      const match = isRoot
-        ? cleanCurrent === "/"
-        : cleanCurrent === cleanHref || cleanCurrent.startsWith(cleanHref + "/");
-
-      if (!match) continue;
-
-      if (cleanHref.length > bestLen) {
-        best = a;
-        bestLen = cleanHref.length;
-      }
-    }
-
-    if (best) best.classList.add("is-active");
-  }
-
-  // =========================
-  // Toasts: cerrar + autocerrar
+  // Toasts
   // =========================
   function initToasts() {
+    const removeToast = (toast) => {
+      if (!toast || !toast.isConnected) return;
+
+      toast.style.opacity = "0";
+      toast.style.transform = "translateY(-6px)";
+      toast.style.transition = "opacity .18s ease, transform .18s ease";
+      window.setTimeout(() => {
+        if (toast.isConnected) toast.remove();
+      }, 220);
+    };
+
     document.addEventListener("click", (e) => {
       const btn = e.target.closest(".toast__close,[data-toast-close]");
       if (!btn) return;
@@ -62,69 +30,65 @@
       const toast = btn.closest(".toast,[data-toast]");
       if (!toast) return;
 
-      toast.style.opacity = "0";
-      toast.style.transform = "translateY(-6px)";
-      toast.style.transition = "opacity .18s ease, transform .18s ease";
-      window.setTimeout(() => toast.remove(), 220);
+      removeToast(toast);
     });
 
     document.querySelectorAll(".toast,[data-toast]").forEach((toast) => {
       const ms = 4500;
-
-      window.setTimeout(() => {
-        if (!toast.isConnected) return;
-
-        toast.style.opacity = "0";
-        toast.style.transform = "translateY(-6px)";
-        toast.style.transition = "opacity .18s ease, transform .18s ease";
-        window.setTimeout(() => toast.remove(), 220);
-      }, ms);
+      window.setTimeout(() => removeToast(toast), ms);
     });
   }
 
   // =========================
-  // Modal preview (delegado)
+  // Modal preview
   // =========================
   function initModalPreview() {
+    const modal = document.querySelector("#previewModal");
+    if (!modal) return;
+
+    const titleEl = modal.querySelector(".modal__title");
+    const frame = modal.querySelector("iframe");
+
+    const open = (url, title) => {
+      modal.classList.add("is-open");
+      modal.setAttribute("aria-hidden", "false");
+      if (titleEl) titleEl.textContent = title || "Vista previa";
+      if (frame) frame.src = url || "about:blank";
+    };
+
+    const close = () => {
+      modal.classList.remove("is-open");
+      modal.setAttribute("aria-hidden", "true");
+      if (frame) frame.src = "about:blank";
+    };
+
     document.addEventListener("click", (e) => {
       const openBtn = e.target.closest("[data-modal-open]");
       if (openBtn) {
         const url = openBtn.getAttribute("data-modal-open");
         const title = openBtn.getAttribute("data-modal-title") || "Vista previa";
-        const modal = document.querySelector("#previewModal");
-        if (!modal) return;
-
-        modal.classList.add("is-open");
-        const t = modal.querySelector(".modal__title");
-        const frame = modal.querySelector("iframe");
-        if (t) t.textContent = title;
-        if (frame) frame.src = url || "about:blank";
+        open(url, title);
         return;
       }
 
       const closeBtn = e.target.closest("[data-modal-close]");
       if (closeBtn) {
-        const modal = closeBtn.closest(".modal");
-        if (!modal) return;
-
-        modal.classList.remove("is-open");
-        const frame = modal.querySelector("iframe");
-        if (frame) frame.src = "about:blank";
+        close();
         return;
       }
 
-      // click fuera del panel
-      if (e.target && e.target.classList && e.target.classList.contains("modal")) {
-        const modal = e.target;
-        modal.classList.remove("is-open");
-        const frame = modal.querySelector("iframe");
-        if (frame) frame.src = "about:blank";
-      }
+      // Clic fuera (backdrop)
+      if (e.target === modal) close();
+    });
+
+    // ESC
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape" && modal.classList.contains("is-open")) close();
     });
   }
 
   // =========================
-  // Dropzone (si existe)
+  // Dropzone
   // =========================
   function initDropzone() {
     const dz = document.querySelector("[data-dropzone]");
@@ -155,11 +119,13 @@
       const files = ev.dataTransfer && ev.dataTransfer.files ? ev.dataTransfer.files : null;
       if (!files || files.length === 0) return;
 
-      // En Chrome/Edge normalmente funciona asignar input.files
+      // Intento seguro: DataTransfer (mejor compatibilidad)
       try {
-        input.files = files;
+        const dt = new DataTransfer();
+        for (const f of files) dt.items.add(f);
+        input.files = dt.files;
       } catch (_) {
-        // Si no se puede asignar, no rompemos nada.
+        // Si el navegador no lo permite, igual actualizamos contador (no romper)
       }
 
       updateCount();
@@ -170,12 +136,73 @@
   }
 
   // =========================
+  // Confirm modal PRO
+  // =========================
+  function initConfirmModal() {
+    const modal = document.querySelector("#confirmModal");
+    if (!modal) return;
+
+    const titleEl = modal.querySelector("[data-confirm-title]");
+    const textEl = modal.querySelector("[data-confirm-text]"); // ✅ coincide con tu HTML
+    const okBtn = modal.querySelector("[data-confirm-ok]");
+    const cancelBtn = modal.querySelectorAll("[data-confirm-cancel]");
+
+    let pendingForm = null;
+
+    const open = (opts) => {
+      if (titleEl) titleEl.textContent = opts.title || "Confirmar acción";
+      if (textEl) textEl.textContent = opts.message || "¿Confirmas esta acción?";
+      if (okBtn) okBtn.textContent = opts.okText || "Confirmar";
+      modal.classList.add("is-open");
+      modal.setAttribute("aria-hidden", "false");
+    };
+
+    const close = () => {
+      modal.classList.remove("is-open");
+      modal.setAttribute("aria-hidden", "true");
+      pendingForm = null;
+    };
+
+    document.addEventListener("click", (e) => {
+      const btn = e.target.closest("[data-confirm]");
+      if (!btn) return;
+
+      e.preventDefault();
+
+      pendingForm = btn.closest("form");
+
+      open({
+        title: btn.getAttribute("data-confirm-title") || "Confirmación",
+        message: btn.getAttribute("data-confirm") || "¿Confirmas esta acción?",
+        okText: btn.getAttribute("data-confirm-ok") || "Confirmar",
+      });
+    });
+
+    cancelBtn.forEach((b) => b.addEventListener("click", close));
+
+    if (okBtn) {
+      okBtn.addEventListener("click", () => {
+        if (pendingForm) pendingForm.submit();
+        close();
+      });
+    }
+
+    modal.addEventListener("click", (e) => {
+      if (e.target === modal) close();
+    });
+
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape" && modal.classList.contains("is-open")) close();
+    });
+  }
+
+  // =========================
   // Init
   // =========================
   window.addEventListener("DOMContentLoaded", () => {
-    setActiveNav();
     initToasts();
     initModalPreview();
     initDropzone();
+    initConfirmModal();
   });
 })();

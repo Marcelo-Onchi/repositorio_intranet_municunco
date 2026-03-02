@@ -25,20 +25,10 @@ class Config:
     UPLOAD_DIR = os.getenv("UPLOAD_DIR", "uploads")
     UPLOAD_PATH = (BASE_DIR / UPLOAD_DIR).resolve()
 
-    # Límite máximo de subida (ej: 20MB)
     MAX_CONTENT_LENGTH = int(os.getenv("MAX_CONTENT_LENGTH", 20 * 1024 * 1024))
 
-    # Extensiones permitidas (editable)
     ALLOWED_EXTENSIONS = {
-        "pdf",
-        "doc",
-        "docx",
-        "xls",
-        "xlsx",
-        "png",
-        "jpg",
-        "jpeg",
-        "zip",
+        "pdf", "doc", "docx", "xls", "xlsx", "png", "jpg", "jpeg", "zip",
     }
 
     # ==========================================================
@@ -48,7 +38,7 @@ class Config:
     ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "")
 
     # ==========================================================
-    # Google OAuth (Calendar)
+    # Google OAuth
     # ==========================================================
     GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID", "")
     GOOGLE_CLIENT_SECRET = os.getenv("GOOGLE_CLIENT_SECRET", "")
@@ -56,8 +46,6 @@ class Config:
         "GOOGLE_REDIRECT_URI",
         "http://127.0.0.1:5000/calendar/callback",
     )
-
-    # Scopes: con readonly puedes leer, con calendar puedes crear/editar
     GOOGLE_SCOPES = [
         "https://www.googleapis.com/auth/calendar",
     ]

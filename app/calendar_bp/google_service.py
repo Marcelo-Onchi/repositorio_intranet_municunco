@@ -1,66 +1,82 @@
 from __future__ import annotations
 
-from datetime import datetime, timedelta, date
+from datetime import datetime, timedelta
 from typing import Any
 
 from flask import current_app
-from googleapiclient.discovery import build
-from google.oauth2.credentials import Credentials
 from google.auth.transport.requests import Request
+from google.oauth2.credentials import Credentials
+from googleapiclient.discovery import build
 
 from app.extensions import db
 from app.models import GoogleToken
 
 
-def _get_scopes() -> list[str]:
+def _scopes() -> list[str]:
     scopes = current_app.config.get("GOOGLE_SCOPES") or []
-    if not scopes:
-        scopes = ["https://www.googleapis.com/auth/calendar"]
-    return scopes
+    return scopes or ["https://www.googleapis.com/auth/calendar"]
 
 
 def _get_credentials(user_id: int) -> Credentials | None:
+    """
+    Construye Credentials desde DB y refresca access_token si está expirado.
+    Retorna None si el usuario no tiene token guardado.
+    """
     token = GoogleToken.query.filter_by(user_id=user_id).first()
     if not token:
         return None
 
-    scopes = _get_scopes()
+    client_id = current_app.config.get("GOOGLE_CLIENT_ID", "")
+    client_secret = current_app.config.get("GOOGLE_CLIENT_SECRET", "")
+    if not client_id or not client_secret:
+        return None
 
     creds = Credentials(
         token=token.access_token,
         refresh_token=token.refresh_token,
         token_uri="https://oauth2.googleapis.com/token",
-        client_id=current_app.config.get("GOOGLE_CLIENT_ID", ""),
-        client_secret=current_app.config.get("GOOGLE_CLIENT_SECRET", ""),
-        scopes=scopes,
+        client_id=client_id,
+        client_secret=client_secret,
+        scopes=_scopes(),
     )
 
-    # Refresh automático si expiró
+    # Refrescar si corresponde
     try:
-        if creds and creds.expired and creds.refresh_token:
+        if creds.expired and creds.refresh_token:
             creds.refresh(Request())
             token.access_token = creds.token
+
+            # Guardar expiración si viene
             if creds.expiry:
                 token.token_expiry = creds.expiry.replace(tzinfo=None)
+
             db.session.commit()
     except Exception:
-        # Si falla refresh, tratamos como no válido
+        # Si refresh falla, no reventamos el sistema
         return None
 
     return creds
 
 
-def list_upcoming_events(user_id: int, days: int = 30, max_results: int = 5) -> list[dict[str, Any]]:
+def list_events_range(
+    user_id: int,
+    start_dt: datetime,
+    end_dt: datetime,
+    max_results: int = 50,
+) -> list[dict[str, Any]]:
+    """
+    Lista eventos del calendario primary en un rango [start_dt, end_dt].
+    """
     creds = _get_credentials(user_id)
     if not creds:
         return []
 
     service = build("calendar", "v3", credentials=creds)
-    now = datetime.utcnow()
-    time_min = now.isoformat() + "Z"
-    time_max = (now + timedelta(days=days)).isoformat() + "Z"
 
-    events_result = service.events().list(
+    time_min = start_dt.isoformat() + "Z"
+    time_max = end_dt.isoformat() + "Z"
+
+    res = service.events().list(
         calendarId="primary",
         timeMin=time_min,
         timeMax=time_max,
@@ -69,61 +85,21 @@ def list_upcoming_events(user_id: int, days: int = 30, max_results: int = 5) -> 
         orderBy="startTime",
     ).execute()
 
-    items = events_result.get("items", [])
+    items = res.get("items", [])
     out: list[dict[str, Any]] = []
+
     for ev in items:
         start = ev.get("start", {})
-        dt = start.get("dateTime") or start.get("date")
-        out.append({
-            "id": ev.get("id"),
-            "summary": ev.get("summary", "(sin título)"),
-            "when": dt,
-        })
-    return out
+        when = start.get("dateTime") or start.get("date")
+        out.append(
+            {
+                "id": ev.get("id"),
+                "summary": ev.get("summary", "(sin título)"),
+                "when": when,
+                "link": ev.get("htmlLink"),
+            }
+        )
 
-
-def list_upcoming_deadlines_7d(user_id: int, days: int = 7) -> list[dict[str, Any]]:
-    creds = _get_credentials(user_id)
-    if not creds:
-        return []
-
-    service = build("calendar", "v3", credentials=creds)
-    now = datetime.utcnow()
-    time_min = now.isoformat() + "Z"
-    time_max = (now + timedelta(days=days)).isoformat() + "Z"
-
-    events_result = service.events().list(
-        calendarId="primary",
-        timeMin=time_min,
-        timeMax=time_max,
-        maxResults=50,
-        singleEvents=True,
-        orderBy="startTime",
-        q="📌 Subir:",
-    ).execute()
-
-    items = events_result.get("items", [])
-    out: list[dict[str, Any]] = []
-    for ev in items:
-        summary = ev.get("summary", "")
-        start = ev.get("start", {})
-        dt_str = start.get("dateTime") or start.get("date")
-
-        d: date | None = None
-        try:
-            if dt_str and "T" in dt_str:
-                d = datetime.fromisoformat(dt_str.replace("Z", "")).date()
-            elif dt_str:
-                d = date.fromisoformat(dt_str)
-        except Exception:
-            d = None
-
-        out.append({
-            "id": ev.get("id"),
-            "summary": summary or "(sin título)",
-            "when": dt_str,
-            "date": d,
-        })
     return out
 
 
@@ -134,13 +110,17 @@ def create_deadline_event(
     start_iso: str,
     end_iso: str,
 ) -> bool:
+    """
+    Crea un evento en Google Calendar.
+    start_iso/end_iso deben venir en ISO8601 (ideal con timezone o local asumido).
+    """
     creds = _get_credentials(user_id)
     if not creds:
         return False
 
     service = build("calendar", "v3", credentials=creds)
 
-    event = {
+    body = {
         "summary": f"📌 Subir: {title}",
         "description": description,
         "start": {"dateTime": start_iso},
@@ -154,5 +134,5 @@ def create_deadline_event(
         },
     }
 
-    service.events().insert(calendarId="primary", body=event).execute()
+    service.events().insert(calendarId="primary", body=body).execute()
     return True

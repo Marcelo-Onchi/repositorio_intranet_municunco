@@ -20,14 +20,6 @@ def load_user(user_id: str) -> Optional["User"]:
 
 
 class User(db.Model, UserMixin):
-    """
-    Usuario del sistema.
-
-    Reglas:
-    - Login por username (sin @)
-    - Registro exige username + email + full_name + password
-    """
-
     __tablename__ = "user"
 
     id = db.Column(db.Integer, primary_key=True)
@@ -46,6 +38,14 @@ class User(db.Model, UserMixin):
     documents = db.relationship(
         "Document",
         back_populates="uploaded_by",
+        lazy="select",
+        cascade="all, delete-orphan",
+    )
+
+    google_token = db.relationship(
+        "GoogleToken",
+        back_populates="user",
+        uselist=False,
         lazy="select",
         cascade="all, delete-orphan",
     )
@@ -83,11 +83,8 @@ class Document(db.Model):
 
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
 
-    # Fecha límite opcional (para vencimientos)
-    due_date = db.Column(db.Date, nullable=True)
-
-    # Id del evento de Google (opcional, por si después lo implementamos)
-    gc_event_id = db.Column(db.String(128), nullable=True)
+    # ✅ Fecha límite (opcional)
+    due_date = db.Column(db.Date, nullable=True, index=True)
 
     category_id = db.Column(db.Integer, db.ForeignKey("category.id"), nullable=True)
     category = db.relationship("Category", back_populates="documents", lazy="joined")
@@ -98,21 +95,15 @@ class Document(db.Model):
 
 class GoogleToken(db.Model):
     """
-    Token OAuth de Google Calendar por usuario.
+    Token OAuth Google por usuario (Calendar).
+    Guardamos refresh_token para poder renovar access_token.
     """
-
     __tablename__ = "google_token"
 
     id = db.Column(db.Integer, primary_key=True)
 
-    user_id = db.Column(
-        db.Integer,
-        db.ForeignKey("user.id"),
-        unique=True,
-        nullable=False,
-        index=True,
-    )
-    user = db.relationship("User", lazy="joined")
+    user_id = db.Column(db.Integer, db.ForeignKey("user.id"), unique=True, nullable=False)
+    user = db.relationship("User", back_populates="google_token", lazy="joined")
 
     access_token = db.Column(db.Text, nullable=False)
     refresh_token = db.Column(db.Text, nullable=True)
@@ -121,9 +112,4 @@ class GoogleToken(db.Model):
     scopes = db.Column(db.Text, nullable=True)
 
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
-    updated_at = db.Column(
-        db.DateTime,
-        default=datetime.utcnow,
-        onupdate=datetime.utcnow,
-        nullable=False,
-    )
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)

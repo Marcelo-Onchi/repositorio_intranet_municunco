@@ -8,7 +8,7 @@
 {% block content %}
   <div class="page-head">
     <h1 class="h1">Explorar documentos</h1>
-    <div class="page-sub">Busca, filtra por categoría y por rango de fechas (formato Chile).</div>
+    <div class="page-sub">Busca, filtra por categoría, por rango de fechas y por estado de vencimiento.</div>
   </div>
 
   <div class="card">
@@ -24,9 +24,7 @@
           <select class="input" id="category_id" name="category_id">
             <option value="">Todas</option>
             {% for c in categories %}
-              <option value="{{ c.id }}" {% if category_id == (c.id|string) %}selected{% endif %}>
-                {{ c.name }}
-              </option>
+              <option value="{{ c.id }}" {% if category_id == (c.id|string) %}selected{% endif %}>{{ c.name }}</option>
             {% endfor %}
           </select>
         </div>
@@ -40,10 +38,30 @@
           <label class="label" for="hasta">Hasta</label>
           <input class="input" id="hasta" name="hasta" value="{{ hasta }}" data-date placeholder="dd-mm-aaaa" />
         </div>
+
+        <div class="form__row" style="min-width:210px;">
+          <label class="label" for="due_status">Vencimiento</label>
+          <select class="input" id="due_status" name="due_status">
+            <option value="all" {% if due_status == "all" %}selected{% endif %}>Todos</option>
+            <option value="has_due" {% if due_status == "has_due" %}selected{% endif %}>Con fecha límite</option>
+            <option value="no_due" {% if due_status == "no_due" %}selected{% endif %}>Sin fecha límite</option>
+            <option value="overdue" {% if due_status == "overdue" %}selected{% endif %}>Vencidos</option>
+            <option value="due_soon" {% if due_status == "due_soon" %}selected{% endif %}>Vence hoy / 7 días</option>
+          </select>
+        </div>
+
+        <div class="form__row" style="min-width:220px;">
+          <label class="label" for="sort">Orden</label>
+          <select class="input" id="sort" name="sort">
+            <option value="created_desc" {% if sort == "created_desc" %}selected{% endif %}>Más recientes</option>
+            <option value="due_asc" {% if sort == "due_asc" %}selected{% endif %}>Fecha límite (más próxima)</option>
+            <option value="due_desc" {% if sort == "due_desc" %}selected{% endif %}>Fecha límite (más lejana)</option>
+          </select>
+        </div>
       </div>
 
       <div class="toolbar__right">
-        <button class="btn btn--ghost" type="submit">Filtrar</button>
+        <button class="btn btn--ghost" type="submit">Aplicar</button>
         <a class="btn" href="{{ url_for('documents.upload') }}">Subir</a>
       </div>
     </form>
@@ -66,6 +84,7 @@
             <th>Acciones</th>
           </tr>
         </thead>
+
         <tbody>
           {% for d in docs %}
             <tr>
@@ -90,37 +109,13 @@
                   {% set diff = (d.due_date - today).days %}
 
                   {% if diff < 0 %}
-                    <span
-                      class="badge"
-                      title="Vencido hace {{ (diff * -1) }} día(s)"
-                      style="background:rgba(220,38,38,.12); border-color:rgba(220,38,38,.35); color:#b91c1c;"
-                    >
-                      🔴 {{ d.due_date.strftime("%d-%m-%Y") }}
-                    </span>
+                    <span class="badge badge--danger" title="Vencido hace {{ (diff * -1) }} día(s)">🔴 {{ d.due_date.strftime("%d-%m-%Y") }}</span>
                   {% elif diff == 0 %}
-                    <span
-                      class="badge"
-                      title="Vence hoy"
-                      style="background:rgba(234,88,12,.12); border-color:rgba(234,88,12,.35); color:#c2410c;"
-                    >
-                      🟠 {{ d.due_date.strftime("%d-%m-%Y") }}
-                    </span>
+                    <span class="badge badge--warn" title="Vence hoy">🟠 {{ d.due_date.strftime("%d-%m-%Y") }}</span>
                   {% elif diff <= 7 %}
-                    <span
-                      class="badge"
-                      title="Faltan {{ diff }} día(s)"
-                      style="background:rgba(234,88,12,.12); border-color:rgba(234,88,12,.35); color:#c2410c;"
-                    >
-                      🟠 {{ d.due_date.strftime("%d-%m-%Y") }}
-                    </span>
+                    <span class="badge badge--warn" title="Faltan {{ diff }} día(s)">🟠 {{ d.due_date.strftime("%d-%m-%Y") }}</span>
                   {% else %}
-                    <span
-                      class="badge"
-                      title="Faltan {{ diff }} día(s)"
-                      style="background:rgba(22,163,74,.12); border-color:rgba(22,163,74,.35); color:#15803d;"
-                    >
-                      🟢 {{ d.due_date.strftime("%d-%m-%Y") }}
-                    </span>
+                    <span class="badge badge--ok" title="Faltan {{ diff }} día(s)">🟢 {{ d.due_date.strftime("%d-%m-%Y") }}</span>
                   {% endif %}
                 {% else %}
                   <span class="badge" title="Sin fecha límite">—</span>
@@ -139,14 +134,19 @@
                     type="button"
                     data-modal-open="{{ url_for('documents.preview', doc_id=d.id) }}"
                     data-modal-title="{{ d.filename }}"
-                  >
-                    👁️ Vista previa
-                  </button>
+                  >👁️ Vista previa</button>
+
                   <a class="btn btn--ghost btn--small" href="{{ url_for('documents.download', doc_id=d.id) }}">⬇️ Descargar</a>
 
                   {% if current_user.is_admin %}
                     <form method="POST" action="{{ url_for('documents.delete', doc_id=d.id) }}" style="display:inline;">
-                      <button class="btn btn--danger btn--small" type="submit" onclick="return confirm('¿Eliminar este documento?')">🗑️</button>
+                      <button
+                        class="btn btn--danger btn--small"
+                        type="button"
+                        data-confirm="¿Eliminar este documento? Esta acción no se puede deshacer."
+                        data-confirm-title="Eliminar documento"
+                        data-confirm-ok="Eliminar"
+                      >🗑️ Eliminar</button>
                     </form>
                   {% endif %}
                 </div>
@@ -155,6 +155,19 @@
           {% endfor %}
         </tbody>
       </table>
+    </div>
+
+    <!-- Modal preview -->
+    <div id="previewModal" class="modal" aria-hidden="true">
+      <div class="modal__panel" role="dialog" aria-modal="true" aria-label="Vista previa">
+        <div class="modal__head">
+          <div class="modal__title">Vista previa</div>
+          <button class="modal__close" type="button" data-modal-close aria-label="Cerrar">×</button>
+        </div>
+        <div class="modal__body">
+          <iframe class="modal__frame" src="about:blank" title="Vista previa"></iframe>
+        </div>
+      </div>
     </div>
   {% else %}
     <div class="card center">
@@ -165,19 +178,6 @@
       </div>
     </div>
   {% endif %}
-
-  <!-- Modal preview -->
-  <div id="previewModal" class="modal" aria-hidden="true">
-    <div class="modal__panel" role="dialog" aria-modal="true" aria-label="Vista previa">
-      <div class="modal__head">
-        <div class="modal__title">Vista previa</div>
-        <button class="modal__close" type="button" data-modal-close aria-label="Cerrar">×</button>
-      </div>
-      <div class="modal__body">
-        <iframe class="modal__frame" src="about:blank" title="Vista previa"></iframe>
-      </div>
-    </div>
-  </div>
 {% endblock %}
 
 {% block extra_scripts %}

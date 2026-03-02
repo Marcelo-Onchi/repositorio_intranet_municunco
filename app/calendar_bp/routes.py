@@ -5,18 +5,19 @@ from urllib.parse import urlencode
 
 import requests
 from flask import current_app, flash, redirect, render_template, request, url_for
-from flask_login import login_required, current_user
+from flask_login import current_user, login_required
 
 from app.extensions import db
 from app.models import GoogleToken
 from . import bp
 
 
+# =========================
+# Helpers OAuth
+# =========================
 def _get_scopes() -> list[str]:
     scopes = current_app.config.get("GOOGLE_SCOPES") or []
-    if not scopes:
-        scopes = ["https://www.googleapis.com/auth/calendar"]
-    return scopes
+    return scopes or ["https://www.googleapis.com/auth/calendar"]
 
 
 def _google_oauth_authorize_url() -> str:
@@ -32,8 +33,8 @@ def _google_oauth_authorize_url() -> str:
         "redirect_uri": redirect_uri,
         "response_type": "code",
         "scope": " ".join(scopes),
-        "access_type": "offline",  # refresh_token
-        "prompt": "consent",       # fuerza refresh_token al conectar
+        "access_type": "offline",
+        "prompt": "consent",
         "include_granted_scopes": "true",
     }
     return "https://accounts.google.com/o/oauth2/v2/auth?" + urlencode(params)
@@ -59,30 +60,43 @@ def _exchange_code_for_token(code: str) -> dict | None:
     r = requests.post(token_url, data=data, timeout=15)
     if r.status_code != 200:
         return None
-
     return r.json()
 
 
+def _parse_date_ddmmyyyy(raw: str) -> datetime | None:
+    raw = (raw or "").strip()
+    if not raw:
+        return None
+    try:
+        return datetime.strptime(raw, "%d-%m-%Y")
+    except ValueError:
+        return None
+
+
+# =========================
+# Routes
+# =========================
 @bp.get("/")
 @login_required
 def index():
     token = GoogleToken.query.filter_by(user_id=current_user.id).first()
     connected = bool(token)
 
+    desde_raw = request.args.get("desde", "").strip()
+    hasta_raw = request.args.get("hasta", "").strip()
+
+    # rango por defecto: hoy -> +14 días
+    desde = _parse_date_ddmmyyyy(desde_raw) or datetime.utcnow()
+    hasta = _parse_date_ddmmyyyy(hasta_raw) or (desde + timedelta(days=14))
+
+    if hasta < desde:
+        desde, hasta = hasta, desde
+
     events: list[dict] = []
     if connected:
-        # Best-effort: si falla Google, no revienta la página
-        try:
-            from app.calendar_bp.google_service import list_upcoming_events
+        from .google_service import list_events_range
 
-            events = list_upcoming_events(
-                user_id=current_user.id,
-                days=30,
-                max_results=15,
-            ) or []
-        except Exception:
-            flash("No se pudieron cargar eventos desde Google Calendar (revisa conexión/permisos).", "warning")
-            events = []
+        events = list_events_range(current_user.id, desde, hasta, max_results=50)
 
     return render_template(
         "calendar/index.html",
@@ -121,7 +135,7 @@ def callback():
         return redirect(url_for("calendar.index"))
 
     access_token = payload.get("access_token")
-    refresh_token = payload.get("refresh_token")  # puede venir vacío si ya se concedió antes
+    refresh_token = payload.get("refresh_token")
     expires_in = payload.get("expires_in")
     scope = payload.get("scope")
 
@@ -145,7 +159,6 @@ def callback():
         db.session.add(token)
     else:
         token.access_token = access_token
-        # No pisar refresh_token si viene vacío
         if refresh_token:
             token.refresh_token = refresh_token
         token.token_expiry = expiry

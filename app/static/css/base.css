@@ -404,6 +404,11 @@ img{ max-width:100%; height:auto; }
   border-radius: var(--r-10);
   overflow:hidden;
 }
+
+/* Clave: no dejes que textos largos rompan la tabla */
+.table th, .table td{
+  vertical-align: top;
+}
 .table th{
   text-align:left;
   background: var(--c-bg-2);
@@ -424,7 +429,7 @@ img{ max-width:100%; height:auto; }
   display:inline-flex;
   align-items:center;
   gap:8px;
-  max-width: 420px;
+  max-width: 520px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -432,13 +437,19 @@ img{ max-width:100%; height:auto; }
   color: var(--c-primary-3);
 }
 
+/* Acciones: orden pro (vertical, mismo ancho) */
 .actions{
   display:flex;
+  flex-direction: column;
   gap: 8px;
-  flex-wrap: wrap;
+  align-items: flex-end;
+}
+.actions .btn{
+  width: 160px;
+  justify-content:center;
 }
 
-/* Dropzone */
+/* --- Dropzone --- */
 .dropzone{
   border: 2px dashed rgba(2,132,199,.45);
   border-radius: var(--r-10);
@@ -612,13 +623,69 @@ img{ max-width:100%; height:auto; }
   background: rgba(2,132,199,.08);
 }
 
-/* Responsive */
+/* =========================
+   Badges - estados
+========================= */
+.badge--danger{
+  background: rgba(220,38,38,.12);
+  border-color: rgba(220,38,38,.35);
+  color:#b91c1c;
+}
+.badge--warn{
+  background: rgba(234,88,12,.12);
+  border-color: rgba(234,88,12,.35);
+  color:#c2410c;
+}
+.badge--ok{
+  background: rgba(22,163,74,.12);
+  border-color: rgba(22,163,74,.35);
+  color:#15803d;
+}
+
+/* Confirm modal: look pro */
+#confirmModal .modal__panel{
+  max-width: 520px;
+}
+#confirmModal .modal__body{
+  padding: 14px;
+}
+#confirmModal .actions{
+  justify-content: flex-end;
+}
+
+/* =========================
+   FIXES RESPONSIVE / OVERFLOW
+========================= */
+
+/* Esto evita que textos largos rompan grid/flex */
+.content, .card, .stat, .stat__value, .pill, .table td{
+  min-width: 0;
+}
+
+/* Dashboard: "Último Documento" con ellipsis */
+.stat__value.is-truncate{
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* En pantallas chicas, la tabla y acciones se adaptan */
 @media (max-width: 980px){
   .layout{ grid-template-columns: 1fr; }
   .sidebar{ position: static; }
   .content{ padding: 16px; }
   .stats{ grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .pill{ max-width: 78vw; }
+
+  .file-pill{ max-width: 280px; }
+
+  /* Acciones a ancho completo en móvil */
+  .actions{
+    align-items: stretch;
+  }
+  .actions .btn{
+    width: 100%;
+  }
 }
 
 @media (max-width: 520px){

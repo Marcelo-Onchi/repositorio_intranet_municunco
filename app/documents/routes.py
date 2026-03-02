@@ -5,7 +5,6 @@ from datetime import date, datetime, time, timedelta
 from pathlib import Path
 from typing import Optional
 from uuid import uuid4
-from zoneinfo import ZoneInfo
 
 from flask import (
     abort,
@@ -17,11 +16,11 @@ from flask import (
     send_file,
     url_for,
 )
-from flask_login import login_required, current_user
+from flask_login import current_user, login_required
 from werkzeug.utils import secure_filename
 
 from app.extensions import db
-from app.models import Category, Document
+from app.models import Category, Document, GoogleToken
 from . import bp
 
 
@@ -38,22 +37,12 @@ def _allowed_file(filename: str) -> bool:
     return ext in allowed
 
 
-def _parse_date_ddmmyyyy_to_date(raw: str) -> Optional[date]:
+def _parse_date_ddmmyyyy(raw: str) -> Optional[datetime]:
     raw = (raw or "").strip()
     if not raw:
         return None
-    for fmt in ("%d-%m-%Y", "%Y-%m-%d"):
-        try:
-            return datetime.strptime(raw, fmt).date()
-        except ValueError:
-            continue
-    return None
 
-
-def _parse_date_ddmmyyyy_to_datetime(raw: str) -> Optional[datetime]:
-    raw = (raw or "").strip()
-    if not raw:
-        return None
+    # Explorer usa dd-mm-aaaa (y aceptamos yyyy-mm-dd por si viene de otro lado)
     for fmt in ("%d-%m-%Y", "%Y-%m-%d"):
         try:
             return datetime.strptime(raw, fmt)
@@ -62,64 +51,69 @@ def _parse_date_ddmmyyyy_to_datetime(raw: str) -> Optional[datetime]:
     return None
 
 
-def _is_google_connected(user_id: int) -> bool:
+def _parse_due_date(raw: str) -> Optional[date]:
+    raw = (raw or "").strip()
+    if not raw:
+        return None
     try:
-        from app.models import GoogleToken  # type: ignore
+        return datetime.strptime(raw, "%d-%m-%Y").date()
+    except ValueError:
+        return None
 
-        return bool(GoogleToken.query.filter_by(user_id=user_id).first())
+
+def _google_connected(user_id: int) -> bool:
+    try:
+        token = GoogleToken.query.filter_by(user_id=user_id).first()
+        return bool(token)
     except Exception:
         return False
 
 
-def _local_iso_range_for_due_date(d: date) -> tuple[str, str]:
+def _iso_local(dt_naive: datetime) -> str:
     """
-    Genera rango ISO con zona horaria local para evento Google.
-    Por defecto: 09:00 a 09:30 hora local.
+    Genera ISO8601 con offset usando ZoneInfo (Python 3.9+).
+    Si algo falla, retorna iso sin tz (igual suele funcionar, pero mejor con tz).
     """
-    tzname = current_app.config.get("APP_TIMEZONE", "America/Santiago")
-    tz = ZoneInfo(tzname)
-
-    start_local = datetime(d.year, d.month, d.day, 9, 0, 0, tzinfo=tz)
-    end_local = start_local + timedelta(minutes=30)
-
-    return start_local.isoformat(), end_local.isoformat()
-
-
-def _create_deadline_events_for_docs(docs: list[Document]) -> int:
-    """
-    Crea eventos Google Calendar para docs con due_date.
-    Retorna: cantidad creada correctamente.
-    """
-    created = 0
+    tz_name = current_app.config.get("APP_TIMEZONE", "America/Santiago")
     try:
-        from app.calendar_bp.google_service import create_deadline_event
+        from zoneinfo import ZoneInfo
+
+        aware = dt_naive.replace(tzinfo=ZoneInfo(tz_name))
+        return aware.isoformat()
     except Exception:
-        return 0
+        return dt_naive.isoformat()
 
-    for doc in docs:
-        if not doc.due_date:
-            continue
 
-        start_iso, end_iso = _local_iso_range_for_due_date(doc.due_date)
+def _create_calendar_deadline_best_effort(title: str, due: date) -> bool:
+    """
+    Best-effort: crea evento a las 09:00 hora local (1h duración).
+    Si falla, retorna False sin romper el flujo.
+    """
+    try:
+        from app.calendar_bp.google_service import create_deadline_event  # type: ignore
+    except Exception:
+        return False
 
-        ok = False
-        try:
-            ok = create_deadline_event(
-                user_id=doc.uploaded_by_id,
-                title=doc.name,
-                description=f"Documento: {doc.filename}\nCategoría: {doc.category.name if doc.category else '—'}",
-                start_iso=start_iso,
-                end_iso=end_iso,
+    start_dt = datetime.combine(due, time(9, 0))
+    end_dt = start_dt + timedelta(hours=1)
+
+    description = (
+        "Recordatorio creado desde Repositorio Municunco.\n"
+        "Tip: Mantén los documentos al día para auditoría y trazabilidad."
+    )
+
+    try:
+        return bool(
+            create_deadline_event(
+                user_id=current_user.id,
+                title=title[:120],
+                description=description,
+                start_iso=_iso_local(start_dt),
+                end_iso=_iso_local(end_dt),
             )
-        except Exception:
-            ok = False
-
-        if ok:
-            # google_service no devuelve id, así que dejamos gc_event_id vacío por ahora
-            # (si luego quieres guardar el id, hay que ajustar google_service para retornarlo)
-            created += 1
-
-    return created
+        )
+    except Exception:
+        return False
 
 
 # =========================
@@ -131,42 +125,32 @@ def dashboard():
     total_docs = Document.query.count()
     total_cats = Category.query.count()
 
-    used_bytes = (
-        db.session.query(db.func.coalesce(db.func.sum(Document.file_size), 0)).scalar() or 0
-    )
+    used_bytes = db.session.query(db.func.coalesce(db.func.sum(Document.file_size), 0)).scalar() or 0
     used_mb = round((used_bytes / 1024 / 1024), 2)
 
     last_doc = Document.query.order_by(Document.created_at.desc()).first()
     last_doc_name = last_doc.name if last_doc else "Ninguno"
 
-    gc_connected = _is_google_connected(current_user.id)
+    gc_connected = _google_connected(current_user.id)
 
-    deadlines_7d: list[dict] = []
-    upcoming_events: list[dict] = []
-    db_deadlines_7d: list[Document] = []
-
+    # Vencimientos próximos (DB): hoy -> 7 días
     today = date.today()
     until = today + timedelta(days=7)
 
-    if gc_connected:
-        try:
-            from app.calendar_bp.google_service import list_upcoming_deadlines_7d, list_upcoming_events
+    due_soon_docs = (
+        Document.query.filter(Document.due_date.isnot(None))
+        .filter(Document.due_date >= today)
+        .filter(Document.due_date <= until)
+        .order_by(Document.due_date.asc())
+        .limit(8)
+        .all()
+    )
 
-            deadlines_7d = list_upcoming_deadlines_7d(current_user.id, days=7) or []
-            upcoming_events = list_upcoming_events(current_user.id, days=30, max_results=5) or []
-        except Exception:
-            deadlines_7d = []
-            upcoming_events = []
-    else:
-        # Fallback profesional: mostrar vencimientos guardados en BD
-        db_deadlines_7d = (
-            Document.query.filter(Document.due_date.isnot(None))
-            .filter(Document.due_date >= today)
-            .filter(Document.due_date <= until)
-            .order_by(Document.due_date.asc(), Document.created_at.desc())
-            .limit(15)
-            .all()
-        )
+    overdue_count = (
+        Document.query.filter(Document.due_date.isnot(None))
+        .filter(Document.due_date < today)
+        .count()
+    )
 
     return render_template(
         "dashboard.html",
@@ -175,9 +159,8 @@ def dashboard():
         used_mb=used_mb,
         last_doc_name=last_doc_name,
         gc_connected=gc_connected,
-        deadlines_7d=deadlines_7d,
-        upcoming_events=upcoming_events,
-        db_deadlines_7d=db_deadlines_7d,
+        due_soon_docs=due_soon_docs,
+        overdue_count=overdue_count,
     )
 
 
@@ -192,9 +175,11 @@ def index():
 
     desde_raw = request.args.get("desde") or ""
     hasta_raw = request.args.get("hasta") or ""
+    desde_dt = _parse_date_ddmmyyyy(desde_raw)
+    hasta_dt = _parse_date_ddmmyyyy(hasta_raw)
 
-    desde_dt = _parse_date_ddmmyyyy_to_datetime(desde_raw)
-    hasta_dt = _parse_date_ddmmyyyy_to_datetime(hasta_raw)
+    due_status = (request.args.get("due_status") or "all").strip()
+    sort = (request.args.get("sort") or "created_desc").strip()
 
     query = Document.query
 
@@ -210,7 +195,39 @@ def index():
     if hasta_dt:
         query = query.filter(Document.created_at <= datetime.combine(hasta_dt.date(), time.max))
 
-    docs = query.order_by(Document.created_at.desc()).all()
+    # Filtro vencimientos
+    today = date.today()
+    if due_status == "has_due":
+        query = query.filter(Document.due_date.isnot(None))
+    elif due_status == "no_due":
+        query = query.filter(Document.due_date.is_(None))
+    elif due_status == "overdue":
+        query = query.filter(Document.due_date.isnot(None)).filter(Document.due_date < today)
+    elif due_status == "due_soon":
+        query = (
+            query.filter(Document.due_date.isnot(None))
+            .filter(Document.due_date >= today)
+            .filter(Document.due_date <= (today + timedelta(days=7)))
+        )
+
+    # Orden
+    if sort == "due_asc":
+        # due_date NULL al final
+        query = query.order_by(
+            db.case((Document.due_date.is_(None), 1), else_=0),
+            Document.due_date.asc(),
+            Document.created_at.desc(),
+        )
+    elif sort == "due_desc":
+        query = query.order_by(
+            db.case((Document.due_date.is_(None), 1), else_=0),
+            Document.due_date.desc(),
+            Document.created_at.desc(),
+        )
+    else:
+        query = query.order_by(Document.created_at.desc())
+
+    docs = query.all()
     categories = Category.query.order_by(Category.name.asc()).all()
 
     return render_template(
@@ -221,6 +238,8 @@ def index():
         category_id=cat_id,
         desde=desde_raw,
         hasta=hasta_raw,
+        due_status=due_status,
+        sort=sort,
     )
 
 
@@ -231,7 +250,8 @@ def index():
 @login_required
 def upload():
     categories = Category.query.order_by(Category.name.asc()).all()
-    return render_template("documents/upload.html", categories=categories)
+    gc_connected = _google_connected(current_user.id)
+    return render_template("documents/upload.html", categories=categories, gc_connected=gc_connected)
 
 
 @bp.post("/upload")
@@ -241,8 +261,13 @@ def upload_post():
     category_id_raw = (request.form.get("category_id") or "").strip()
     category_id = int(category_id_raw) if category_id_raw.isdigit() else None
 
-    due_raw = (request.form.get("due_date") or "").strip()
-    due_date = _parse_date_ddmmyyyy_to_date(due_raw)
+    due_raw = request.form.get("due_date") or ""
+    due = _parse_due_date(due_raw)
+
+    # Validación server-side: no fechas pasadas
+    if due and due < date.today():
+        flash("La fecha límite no puede ser en el pasado.", "warning")
+        return redirect(url_for("documents.upload"))
 
     if not files or all((f is None or not f.filename) for f in files):
         flash("Selecciona al menos un archivo.", "warning")
@@ -253,7 +278,10 @@ def upload_post():
 
     saved = 0
     rejected = 0
-    created_docs: list[Document] = []
+    created_calendar = 0
+    calendar_failed = 0
+
+    gc_connected = _google_connected(current_user.id)
 
     for f in files:
         if not f or not f.filename:
@@ -276,7 +304,6 @@ def upload_post():
         disk_path = upload_path / storage_name
 
         f.save(disk_path)
-
         size = disk_path.stat().st_size if disk_path.exists() else 0
 
         doc = Document(
@@ -286,11 +313,18 @@ def upload_post():
             file_size=int(size),
             category_id=category_id,
             uploaded_by_id=current_user.id,
-            due_date=due_date,
+            due_date=due,
         )
         db.session.add(doc)
-        created_docs.append(doc)
         saved += 1
+
+        # Crear evento (best-effort) por archivo si hay fecha
+        if due and gc_connected:
+            ok = _create_calendar_deadline_best_effort(title=doc.filename, due=due)
+            if ok:
+                created_calendar += 1
+            else:
+                calendar_failed += 1
 
     db.session.commit()
 
@@ -299,16 +333,11 @@ def upload_post():
     if rejected:
         flash(f"⚠️ {rejected} archivo(s) rechazado(s) por nombre/extensión.", "warning")
 
-    # Si hay fecha límite y Google conectado, crear eventos
-    if due_date:
-        if _is_google_connected(current_user.id):
-            created_events = _create_deadline_events_for_docs(created_docs)
-            if created_events:
-                flash(f"🗓️ Se crearon {created_events} recordatorio(s) en Google Calendar.", "info")
-            else:
-                flash("No se pudieron crear recordatorios en Google Calendar.", "warning")
-        else:
-            flash("📌 Fecha límite guardada. Conecta Google Calendar para crear recordatorios automáticos.", "info")
+    if due and gc_connected:
+        if created_calendar:
+            flash(f"🗓️ Recordatorios creados en Google Calendar: {created_calendar}.", "info")
+        if calendar_failed:
+            flash(f"⚠️ No se pudieron crear {calendar_failed} recordatorio(s) en Google Calendar.", "warning")
 
     return redirect(url_for("documents.index"))
 

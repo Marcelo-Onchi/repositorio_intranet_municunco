@@ -35,7 +35,6 @@
           <div class="muted">Ya puedes crear y ver eventos asociados a tu usuario.</div>
         </div>
 
-        {# Desconectar debe ser POST #}
         <form method="post" action="{{ url_for('calendar.disconnect') }}">
           <button class="btn btn--ghost" type="submit">Desconectar</button>
         </form>
@@ -71,7 +70,7 @@
 
   <div class="card">
     <div class="h2">Eventos</div>
-    <div class="muted" style="margin-top:6px;">Eventos próximos (o del rango filtrado si lo estás usando en el route).</div>
+    <div class="muted" style="margin-top:6px;">Eventos próximos (o del rango filtrado).</div>
 
     <div style="height:12px;"></div>
 
@@ -86,6 +85,7 @@
             <tr>
               <th>Cuándo</th>
               <th>Título</th>
+              <th>Link</th>
             </tr>
           </thead>
           <tbody>
@@ -93,6 +93,13 @@
               <tr>
                 <td>{{ e.when or "—" }}</td>
                 <td style="font-weight:900;">{{ e.summary or "(sin título)" }}</td>
+                <td>
+                  {% if e.link %}
+                    <a class="btn btn--ghost btn--small" href="{{ e.link }}" target="_blank" rel="noopener">Abrir</a>
+                  {% else %}
+                    —
+                  {% endif %}
+                </td>
               </tr>
             {% endfor %}
           </tbody>

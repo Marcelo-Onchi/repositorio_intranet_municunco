@@ -40,10 +40,10 @@
               data-due-date
               inputmode="numeric"
               autocomplete="off"
+              maxlength="10"
+              pattern="^\d{2}-\d{2}-\d{4}$"
             />
-            <button class="btn btn--ghost btn--small" type="button" id="due_clear">
-              Limpiar
-            </button>
+            <button class="btn btn--ghost btn--small" type="button" id="due_clear">Limpiar</button>
           </div>
 
           <div class="help">
@@ -58,7 +58,7 @@
       <div class="dropzone" data-dropzone>
         <div>
           <div class="dropzone__title">Arrastra archivos aquí o haz clic para seleccionar</div>
-          <div class="dropzone__sub">Permitidos: PDF/DOCX/XLSX/PNG/JPG/ZIP (según configuración)</div>
+          <div class="dropzone__sub">Permitidos según configuración (PDF/DOCX/XLSX/PNG/JPG/ZIP)</div>
         </div>
         <div class="dropzone__right">
           <span class="dropzone__count" data-file-count>0 archivos</span>
@@ -79,7 +79,6 @@
   <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/es.js"></script>
   <script>
     window.addEventListener("DOMContentLoaded", () => {
-      // Fecha límite: sin días pasados
       const dueInput = document.querySelector("[data-due-date]");
       if (dueInput) {
         flatpickr(dueInput, {
@@ -90,7 +89,6 @@
         });
       }
 
-      // Botón limpiar
       const clearBtn = document.querySelector("#due_clear");
       if (clearBtn && dueInput) {
         clearBtn.addEventListener("click", () => {
