@@ -12,19 +12,28 @@ from .extensions import db, login_manager, migrate
 
 
 def create_app() -> Flask:
-    # Carga variables del .env en el entorno (os.environ)
     load_dotenv()
 
-    # instance_relative_config=True -> permite usar instance/config.py en server
     app = Flask(__name__, instance_relative_config=True)
     app.config.from_object(Config)
 
-    # uploads (normalizar a Path sí o sí)
-    upload_path = Path(app.config.get("UPLOAD_PATH", "uploads"))
+    # ------------------------------------------------------
+    # Upload path (on-premise friendly)
+    # - Si viene relativo, lo guardamos en instance/ para no ensuciar el repo
+    # ------------------------------------------------------
+    upload_cfg = app.config.get("UPLOAD_PATH", "uploads")
+    upload_path = Path(upload_cfg)
+
+    if not upload_path.is_absolute():
+        # instance_path es un folder real por ambiente (server/dev)
+        upload_path = Path(app.instance_path) / upload_path
+
     upload_path.mkdir(parents=True, exist_ok=True)
     app.config["UPLOAD_PATH"] = upload_path
 
-    # extensions
+    # ------------------------------------------------------
+    # Extensions
+    # ------------------------------------------------------
     db.init_app(app)
     migrate.init_app(app, db)
 
@@ -33,7 +42,9 @@ def create_app() -> Flask:
     login_manager.login_message = "Debes iniciar sesión."
     login_manager.login_message_category = "warning"
 
-    # blueprints
+    # ------------------------------------------------------
+    # Blueprints (asegurar orden claro)
+    # ------------------------------------------------------
     from .auth import bp as auth_bp
     from .documents import bp as documents_bp
     from .admin import bp as admin_bp
@@ -44,7 +55,9 @@ def create_app() -> Flask:
     app.register_blueprint(admin_bp)
     app.register_blueprint(calendar_bp)
 
-    # Admin inicial (no debe reventar el arranque)
+    # ------------------------------------------------------
+    # Seed admin (NO debe botar la app)
+    # ------------------------------------------------------
     with app.app_context():
         _ensure_admin_user_safe(app)
 
@@ -76,7 +89,6 @@ def _ensure_admin_user_safe(app: Flask) -> None:
             if "user" not in inspector.get_table_names():
                 return
         except SQLAlchemyError:
-            # DB no disponible / credenciales malas / server caído
             return
 
         admin_email = (os.getenv("ADMIN_EMAIL") or "").strip().lower()
@@ -132,5 +144,4 @@ def _ensure_admin_user_safe(app: Flask) -> None:
             db.session.commit()
 
     except Exception:
-        # Si algo raro pasa, no queremos botar la app por un seed de admin
         return

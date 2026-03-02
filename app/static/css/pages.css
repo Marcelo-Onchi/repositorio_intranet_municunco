@@ -1,0 +1,408 @@
+/* =========================================
+   PAGES.CSS — Dashboard / Admin / Docs / Upload
+   Objetivo: tablas sin overflow en desktop + truncados reales
+========================================= */
+
+/* ---------------------------------------------------------
+   Helpers
+--------------------------------------------------------- */
+.table-wrap{
+  width:100%;
+  overflow-x:auto;                 /* fallback si pantalla es chica */
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Evitar que contenido empuje ancho */
+.table td, .table th{ min-width: 0; }
+.table td{ overflow: hidden; }
+
+/* Pills / truncate dentro de celdas */
+.file-pill{
+  display:block;
+  max-width:100%;
+  min-width:0;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  font-weight: 900;
+  color: var(--c-primary-3);
+}
+.file-meta{ margin-top: 4px; }
+
+/* ---------------------------------------------------------
+   DASHBOARD
+--------------------------------------------------------- */
+.stats{
+  display:grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.stat{
+  border:1px solid var(--c-border);
+  border-radius: var(--r-10);
+  padding: 14px;
+  background: linear-gradient(180deg, #fff 0%, rgba(241,245,249,.6) 100%);
+  min-width: 0;
+  overflow:hidden;
+}
+
+.stat__label{
+  font-size: 12px;
+  font-weight: 900;
+  color: var(--c-text-3);
+}
+
+/* Truncado real del texto largo */
+.stat__value{
+  font-size: 22px;
+  font-weight: 950;
+  margin-top: 6px;
+  min-width:0;
+  max-width:100%;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+
+.stat__value .is-truncate{
+  display:block;
+  min-width:0;
+  max-width:100%;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+
+/* ---------------------------------------------------------
+   DOCS / EXPLORAR
+--------------------------------------------------------- */
+.toolbar{
+  display:flex;
+  align-items:flex-end;
+  justify-content:space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin: 10px 0 14px;
+}
+.toolbar__left{
+  display:flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items:flex-end;
+  min-width:0;
+}
+.toolbar__right{
+  display:flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items:flex-end;
+}
+
+/* Tabla docs: layout fijo + acciones con ancho fijo */
+.table--docs{
+  width:100%;
+  table-layout: fixed;
+}
+
+/* 1) Documento, 2) Categoría, 3) Subido, 4) Vence, 5) Tamaño, 6) Acciones */
+.table--docs th:nth-child(1), .table--docs td:nth-child(1){ width: 42%; }
+.table--docs th:nth-child(2), .table--docs td:nth-child(2){ width: 14%; }
+.table--docs th:nth-child(3), .table--docs td:nth-child(3){ width: 14%; }
+.table--docs th:nth-child(4), .table--docs td:nth-child(4){ width: 10%; }
+.table--docs th:nth-child(5), .table--docs td:nth-child(5){ width: 8%;  }
+.table--docs th:nth-child(6), .table--docs td:nth-child(6){ width: 180px; }
+
+/* Acciones Docs: columna estable */
+.actions{
+  display:flex;
+  flex-direction:column;
+  gap: 8px;
+  align-items:stretch;
+}
+.actions .btn{
+  width:100%;
+  max-width:100%;
+  white-space: nowrap;
+}
+
+/* ---------------------------------------------------------
+   UPLOAD (dropzone)
+--------------------------------------------------------- */
+.dropzone{
+  border: 2px dashed rgba(2,132,199,.45);
+  border-radius: var(--r-10);
+  padding: 20px;
+  background: rgba(2,132,199,.04);
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap: 12px;
+  cursor: pointer;
+  transition: background .12s ease, border-color .12s ease;
+}
+.dropzone:hover{
+  background: rgba(2,132,199,.08);
+  border-color: rgba(2,132,199,.65);
+}
+.dropzone.is-dragover{
+  background: rgba(22,163,74,.08);
+  border-color: rgba(22,163,74,.55);
+}
+.dropzone__title{ font-weight: 950; }
+.dropzone__sub{ color: var(--c-text-3); font-size: 12px; margin-top: 4px; }
+.dropzone__right{ display:flex; align-items:center; gap: 10px; }
+.dropzone__count{ color: var(--c-text-2); font-size: 13px; font-weight: 900; }
+
+/* ---------------------------------------------------------
+   ADMIN
+--------------------------------------------------------- */
+.admin-card{
+  background: linear-gradient(180deg, #fff 0%, rgba(241,245,249,.55) 100%);
+}
+
+.admin-switches{
+  display:flex;
+  gap: 14px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+.admin-switches--inner{ margin-top: 4px; }
+
+.admin-check{
+  display:flex;
+  gap: 8px;
+  align-items: center;
+  font-weight: 900;
+  color: var(--c-text-2);
+}
+
+/* Tabla admin: fijo y solo % (no mezclar px en columnas) */
+.table--admin{
+  width:100%;
+  table-layout: fixed;
+}
+
+/* Usuario / Correo / Estado / Rol / Creado / Acciones (100%) */
+.table--admin th:nth-child(1), .table--admin td:nth-child(1){ width: 16%; }
+.table--admin th:nth-child(2), .table--admin td:nth-child(2){ width: 22%; }
+.table--admin th:nth-child(3), .table--admin td:nth-child(3){ width: 12%; }
+.table--admin th:nth-child(4), .table--admin td:nth-child(4){ width: 12%; }
+.table--admin th:nth-child(5), .table--admin td:nth-child(5){ width: 14%; }
+.table--admin th:nth-child(6), .table--admin td:nth-child(6){ width: 24%; }
+
+.table--admin td{ vertical-align: top; }
+
+/* Truncado seguro en Usuario/Correo */
+.table--admin td:nth-child(1) .is-truncate,
+.table--admin td:nth-child(2) .is-truncate{
+  display:block;
+  min-width:0;
+  max-width:100%;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+
+/* ====== BADGES (Activo/Usuario) más pro dentro de admin ====== */
+.table--admin td:nth-child(3),
+.table--admin td:nth-child(4){
+  text-align: center;
+}
+
+.table--admin .badge{
+  padding: 5px 10px;
+  font-size: 12px;
+  gap: 6px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1.1;
+}
+
+.table--admin .badge--ok{
+  background: rgba(22,163,74,.10);
+  border-color: rgba(22,163,74,.30);
+  color:#15803d;
+}
+.table--admin .badge--danger{
+  background: rgba(220,38,38,.10);
+  border-color: rgba(220,38,38,.30);
+  color:#b91c1c;
+}
+
+/* ====== ACCIONES ADMIN (FIX REAL) ======
+   Problema: .admin-details estaba pensado como “panel”
+   y en la tabla se veía como cajas raras con padding/fondo.
+*/
+.admin-actions-cell{
+  padding: 10px 12px;
+}
+
+/* Grilla de acciones */
+.admin-actions-cell .admin-actionpanel{
+  display:grid;
+  grid-template-columns: 1fr;
+  gap: 8px;
+  align-items:start;
+}
+
+/* En pantallas grandes: 2 columnas */
+@media (min-width: 1180px){
+  .admin-actions-cell .admin-actionpanel{
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* forms sin márgenes */
+.admin-actions-cell .admin-actionpanel form{ margin:0; }
+
+/* ✅ IMPORTANTÍSIMO: details en tabla NO deben parecer “card” */
+.admin-actions-cell .admin-details{
+  border: 0;
+  background: transparent;
+  padding: 0;
+  border-radius: 0;
+}
+
+/* Summary como botón real (evita estilos nativos “raros”) */
+.admin-actions-cell .admin-details summary{
+  list-style:none;
+  cursor:pointer;
+
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  gap:8px;
+
+  width:100%;
+  min-width:0;
+  white-space:nowrap;
+
+  /* look compacto */
+  padding: 8px 10px;
+  min-height: 34px;
+  border-radius: 10px;
+
+  /* reset nativo */
+  border: 1px solid rgba(2,132,199,.22);
+  background: #fff;
+  color: var(--c-primary-3);
+  font-weight: 900;
+  font-size: 13px;
+}
+.admin-actions-cell .admin-details summary::-webkit-details-marker{ display:none; }
+.admin-actions-cell .admin-details summary:hover{
+  background: rgba(2,132,199,.06);
+  border-color: rgba(2,132,199,.38);
+}
+
+/* Botones normales dentro de acciones: compactos */
+.admin-actions-cell .btn{
+  width:100%;
+  max-width:100%;
+  min-width:0;
+
+  padding: 8px 10px;
+  min-height: 34px;
+  border-radius: 10px;
+
+  font-size: 13px;
+  font-weight: 900;
+  line-height: 1.1;
+
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  gap:8px;
+}
+
+/* Ghost más sobrio dentro de admin actions */
+.admin-actions-cell .btn--ghost{
+  background:#fff;
+  border: 1px solid rgba(2,132,199,.22);
+  color: var(--c-primary-3);
+}
+.admin-actions-cell .btn--ghost:hover{
+  background: rgba(2,132,199,.06);
+  border-color: rgba(2,132,199,.38);
+}
+
+/* Danger consistente */
+.admin-actions-cell .btn--danger{
+  border: 1px solid rgba(220,38,38,.18);
+}
+
+/* Panel interno de details cuando está abierto: recién ahí mostramos “caja” */
+.admin-actions-cell .admin-details[open]{
+  grid-column: 1 / -1; /* ocupa ancho completo si estás en 2 columnas */
+}
+.admin-actions-cell .admin-details[open] > form{
+  margin-top: 8px;
+  border: 1px solid rgba(2,132,199,.14);
+  background: rgba(2,132,199,.03);
+  border-radius: 12px;
+  padding: 10px;
+}
+
+/* Categorías */
+.admin-grid-2{ grid-template-columns: 1fr 180px !important; }
+.table--cats{ width:100%; table-layout: fixed; }
+.table--cats th:nth-child(1), .table--cats td:nth-child(1){ width: auto; }
+.table--cats th:nth-child(2), .table--cats td:nth-child(2){ width: 200px; }
+
+/* ---------------------------------------------------------
+   Responsive
+--------------------------------------------------------- */
+@media (max-width: 980px){
+  .stats{ grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .table--docs th:nth-child(6), .table--docs td:nth-child(6){ width: 200px; }
+
+  /* Admin: acciones en 1 columna sí o sí */
+  .admin-actions-cell .admin-actionpanel{ grid-template-columns: 1fr; }
+}
+
+@media (max-width: 520px){
+  .stats{ grid-template-columns: 1fr; }
+  .table-wrap{ overflow-x:auto; } /* móvil: scroll sano */
+}
+/* =========================================
+   ADMIN — FIX acciones (evitar texto partido / botones feos)
+   Pegar al FINAL de pages.css
+========================================= */
+
+/* 1) Acciones: SIEMPRE 1 columna (más pro y estable) */
+.admin-actions-cell .admin-actionpanel{
+  display: grid !important;
+  grid-template-columns: 1fr !important;
+  gap: 8px !important;
+  align-items: start !important;
+}
+
+/* 2) Botones: una sola línea + ancho completo */
+.admin-actions-cell .btn,
+.admin-actions-cell .admin-details summary{
+  width: 100% !important;
+  min-width: 0 !important;
+
+  white-space: nowrap !important;   /* evita “Hacer\nadmin” */
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+
+  justify-content: center !important;
+  line-height: 1.1 !important;
+}
+
+/* 3) Botón peligro: mismo alto y ancho que los demás */
+.admin-actions-cell .btn--danger{
+  min-height: 34px !important;
+}
+
+/* 4) Details abiertos: panel interno sí ocupa ancho completo */
+.admin-actions-cell .admin-details[open]{
+  grid-column: 1 / -1 !important;
+}
+.admin-actions-cell .admin-details[open] > form{
+  width: 100% !important;
+}

@@ -19,8 +19,8 @@
       </div>
       <div class="stat">
         <div class="stat__label">Tu sesión</div>
-        <div class="stat__value is-truncate" title="{{ current_user.username }} (ADMIN)">
-          {{ current_user.username }} (ADMIN)
+        <div class="stat__value">
+          <span class="is-truncate" title="{{ current_user.username }} (ADMIN)">{{ current_user.username }} (ADMIN)</span>
         </div>
       </div>
       <div class="stat">
@@ -31,16 +31,12 @@
 
     <hr class="hr" />
 
-    <!-- =========================
-         USUARIOS
-    ========================== -->
     <div class="section-head">
       <h2 class="h2">👥 Usuarios</h2>
       <div class="muted">Crea, edita, desactiva o elimina cuentas.</div>
     </div>
 
-    <!-- Crear usuario -->
-    <div class="card" style="margin-top: 12px;">
+    <div class="card admin-card mt">
       <div class="card__title">CREAR USUARIO</div>
 
       <form method="POST" action="{{ url_for('admin.create_user') }}" class="form">
@@ -67,26 +63,25 @@
           </div>
         </div>
 
-        <div style="display:flex; gap:14px; flex-wrap:wrap; margin-top: 6px;">
-          <label style="display:flex; align-items:center; gap:8px; font-weight:900;">
+        <div class="admin-switches">
+          <label class="admin-check">
             <input type="checkbox" name="is_admin" />
-            Es administrador
+            <span>Es administrador</span>
           </label>
 
-          <label style="display:flex; align-items:center; gap:8px; font-weight:900;">
+          <label class="admin-check">
             <input type="checkbox" name="is_active" checked />
-            Usuario activo
+            <span>Usuario activo</span>
           </label>
         </div>
 
-        <div style="height:10px;"></div>
-
-        <button class="btn" type="submit">Crear usuario</button>
+        <div class="admin-actions-row">
+          <button class="btn" type="submit">Crear usuario</button>
+        </div>
       </form>
     </div>
 
-    <!-- Tabla usuarios -->
-    <div class="table-wrap" style="margin-top: 14px;">
+    <div class="table-wrap mt">
       <table class="table table--admin">
         <thead>
           <tr>
@@ -103,11 +98,13 @@
           {% for u in users %}
             <tr>
               <td>
-                <div style="font-weight:950;">{{ u.username }}</div>
+                <div class="td-strong is-truncate" title="{{ u.username }}">{{ u.username }}</div>
                 <div class="muted small is-truncate" title="{{ u.full_name or '' }}">{{ u.full_name or '—' }}</div>
               </td>
 
-              <td class="is-truncate" title="{{ u.email }}">{{ u.email }}</td>
+              <td title="{{ u.email }}">
+                <span class="is-truncate">{{ u.email }}</span>
+              </td>
 
               <td>
                 {% if u.is_active %}
@@ -125,20 +122,22 @@
                 {% endif %}
               </td>
 
-              <td class="muted small">
-                {{ u.created_at.strftime("%d-%m-%Y %H:%M") if u.created_at else "—" }}
+              <td class="muted small" title="{{ u.created_at.strftime('%d-%m-%Y %H:%M') if u.created_at else '' }}">
+                <span class="is-truncate">
+                  {{ u.created_at.strftime("%d-%m-%Y %H:%M") if u.created_at else "—" }}
+                </span>
               </td>
 
-              <td>
+              <td class="admin-actions-cell">
                 {% if current_user.id == u.id %}
                   <div class="muted small">Tu cuenta</div>
                 {% else %}
-                  <div class="actions">
-                    <!-- Editar -->
-                    <details class="admin-details">
-                      <summary class="btn btn--ghost btn--small" style="width:100%;">✏️ Editar</summary>
+                  <div class="admin-actionpanel">
 
-                      <form method="POST" action="{{ url_for('admin.update_user', user_id=u.id) }}" class="form" style="margin-top:10px;">
+                    <details class="admin-details">
+                      <summary class="btn btn--ghost btn--small">✏️ Editar</summary>
+
+                      <form method="POST" action="{{ url_for('admin.update_user', user_id=u.id) }}" class="form form--compact">
                         <div class="form__row">
                           <label class="label">Usuario</label>
                           <input class="input" name="username" value="{{ u.username }}" required />
@@ -154,39 +153,37 @@
                           <input class="input" type="email" name="email" value="{{ u.email }}" required />
                         </div>
 
-                        <div style="display:flex; gap:14px; flex-wrap:wrap;">
-                          <label style="display:flex; align-items:center; gap:8px; font-weight:900;">
+                        <div class="admin-switches admin-switches--inner">
+                          <label class="admin-check">
                             <input type="checkbox" name="is_admin" {% if u.is_admin %}checked{% endif %} />
-                            Admin
+                            <span>Admin</span>
                           </label>
 
-                          <label style="display:flex; align-items:center; gap:8px; font-weight:900;">
+                          <label class="admin-check">
                             <input type="checkbox" name="is_active" {% if u.is_active %}checked{% endif %} />
-                            Activo
+                            <span>Activo</span>
                           </label>
                         </div>
 
-                        <button class="btn btn--small" type="submit">Guardar cambios</button>
+                        <button class="btn btn--small" type="submit">Guardar</button>
                       </form>
                     </details>
 
-                    <!-- Reset password -->
                     <details class="admin-details">
-                      <summary class="btn btn--ghost btn--small" style="width:100%;">🔑 Reset contraseña</summary>
+                      <summary class="btn btn--ghost btn--small">🔑 Reset</summary>
 
-                      <form method="POST" action="{{ url_for('admin.reset_password', user_id=u.id) }}" class="form" style="margin-top:10px;">
+                      <form method="POST" action="{{ url_for('admin.reset_password', user_id=u.id) }}" class="form form--compact">
                         <div class="form__row">
                           <label class="label">Nueva contraseña</label>
                           <input class="input" type="password" name="password" placeholder="mínimo 6 caracteres" required />
                         </div>
-                        <button class="btn btn--small" type="submit">Actualizar contraseña</button>
+                        <button class="btn btn--small" type="submit">Actualizar</button>
                       </form>
                     </details>
 
-                    <!-- Toggle active -->
                     <form method="POST" action="{{ url_for('admin.toggle_user_active', user_id=u.id) }}">
                       <button
-                        class="btn btn--small {% if u.is_active %}btn--ghost{% else %}{% endif %}"
+                        class="btn btn--small btn--ghost"
                         type="submit"
                         data-confirm="¿Seguro que quieres {{ 'desactivar' if u.is_active else 'activar' }} este usuario?"
                         data-confirm-title="Confirmar"
@@ -196,7 +193,6 @@
                       </button>
                     </form>
 
-                    <!-- Toggle admin -->
                     <form method="POST" action="{{ url_for('admin.toggle_user_admin', user_id=u.id) }}">
                       <button
                         class="btn btn--small btn--ghost"
@@ -209,7 +205,6 @@
                       </button>
                     </form>
 
-                    <!-- Delete -->
                     <form method="POST" action="{{ url_for('admin.delete_user', user_id=u.id) }}">
                       <button
                         class="btn btn--small btn--danger"
@@ -221,6 +216,7 @@
                         🗑️ Eliminar
                       </button>
                     </form>
+
                   </div>
                 {% endif %}
               </td>
@@ -232,19 +228,16 @@
 
     <hr class="hr" />
 
-    <!-- =========================
-         CATEGORÍAS
-    ========================== -->
     <div class="section-head">
       <h2 class="h2">🏷️ Categorías</h2>
       <div class="muted">Crea categorías para ordenar documentos.</div>
     </div>
 
-    <div class="card" style="margin-top: 12px;">
+    <div class="card admin-card mt">
       <div class="card__title">NUEVA CATEGORÍA</div>
 
-      <form method="POST" action="{{ url_for('admin.create_category') }}" class="form" style="margin-top:0;">
-        <div class="form__grid" style="grid-template-columns: 1fr 140px;">
+      <form method="POST" action="{{ url_for('admin.create_category') }}" class="form form--compact">
+        <div class="form__grid admin-grid-2">
           <div class="form__row">
             <input class="input" name="name" placeholder="Ej: Contratos, Resoluciones, Actas..." required />
           </div>
@@ -255,19 +248,19 @@
       </form>
 
       {% if categories and categories|length %}
-        <div class="table-wrap" style="margin-top: 12px;">
-          <table class="table">
+        <div class="table-wrap mt">
+          <table class="table table--cats">
             <thead>
               <tr>
                 <th>Categoría</th>
-                <th style="width:180px;">Acciones</th>
+                <th>Acciones</th>
               </tr>
             </thead>
             <tbody>
               {% for c in categories %}
                 <tr>
-                  <td style="font-weight:950;">{{ c.name }}</td>
-                  <td>
+                  <td class="td-strong" title="{{ c.name }}"><span class="is-truncate">{{ c.name }}</span></td>
+                  <td class="cats-actions">
                     <form method="POST" action="{{ url_for('admin.delete_category', cat_id=c.id) }}">
                       <button
                         class="btn btn--danger btn--small"
@@ -286,7 +279,7 @@
           </table>
         </div>
       {% else %}
-        <div class="callout" style="margin-top: 12px;">
+        <div class="callout mt">
           <div class="callout__text">
             <strong>Aún no hay categorías.</strong>
             <div class="muted">Crea una para ordenar documentos.</div>

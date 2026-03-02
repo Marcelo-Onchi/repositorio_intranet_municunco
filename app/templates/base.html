@@ -5,9 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>{% block title %}Repositorio Municunco{% endblock %}</title>
 
-    <!-- Sube v cuando cambies CSS/JS para forzar recarga -->
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/base.css', v=10) }}" />
-    <script defer src="{{ url_for('static', filename='js/base.js', v=10) }}"></script>
+    {% set v = config.get("STATIC_VERSION", "1") %}
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/base.css', v=v) }}" />
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/pages.css', v=v) }}" />
+    <script defer src="{{ url_for('static', filename='js/base.js', v=v) }}"></script>
 
     {% block extra_head %}{% endblock %}
   </head>
@@ -27,10 +28,12 @@
 
         <div class="topbar__right">
           {% if current_user.is_authenticated %}
-            {% set pill_title = (current_user.username ~ " — " ~ current_user.full_name) %}
+            {% set pill_title = (current_user.username ~ " — " ~ (current_user.full_name or "")) %}
             <div class="pill" title="{{ pill_title }}">
               <span class="dot" aria-hidden="true"></span>
-              <span class="pill__email">{{ current_user.username }} — {{ current_user.full_name }}</span>
+              <span class="pill__email is-truncate">
+                {{ current_user.username }} — {{ current_user.full_name or "—" }}
+              </span>
               {% if current_user.is_admin %}
                 <span class="pill__tag" aria-label="Administrador">ADMIN</span>
               {% endif %}
@@ -40,7 +43,6 @@
       </div>
     </header>
 
-    <!-- Toasts -->
     {% with messages = get_flashed_messages(with_categories=true) %}
       {% if messages %}
         <div class="toasts" aria-live="polite" aria-atomic="true">
@@ -49,7 +51,15 @@
               <div class="toast__icon" aria-hidden="true"></div>
               <div class="toast__body">
                 <div class="toast__title">
-                  {% if category == "success" %}Listo{% elif category == "warning" %}Atención{% elif category == "info" %}Info{% else %}Error{% endif %}
+                  {% if category == "success" %}
+                    Listo
+                  {% elif category == "warning" %}
+                    Atención
+                  {% elif category == "info" %}
+                    Info
+                  {% else %}
+                    Error
+                  {% endif %}
                 </div>
                 <div class="toast__text">{{ message }}</div>
               </div>
@@ -61,7 +71,7 @@
     {% endwith %}
 
     {% set path = request.path or "" %}
-    {% set is_auth = path.startswith('/auth') %}
+    {% set is_auth = path.startswith("/auth") %}
 
     <main id="main" class="page">
       <div class="container">
@@ -73,32 +83,41 @@
 
                 <nav class="nav">
                   {% if current_user.is_authenticated %}
+                    {% set dash_url = url_for("documents.dashboard") %}
+                    <a class="nav__item {% if path == dash_url %}is-active{% endif %}" href="{{ dash_url }}">
+                      📊 Dashboard
+                    </a>
 
-                    {% set dash_url = url_for('documents.dashboard') %}
-                    <a class="nav__item {% if path == dash_url %}is-active{% endif %}" href="{{ dash_url }}">📊 Dashboard</a>
+                    {% set upload_url = url_for("documents.upload") %}
+                    <a class="nav__item {% if path == upload_url %}is-active{% endif %}" href="{{ upload_url }}">
+                      📤 Subir Documento
+                    </a>
 
-                    {% set upload_url = url_for('documents.upload') %}
-                    <a class="nav__item {% if path == upload_url %}is-active{% endif %}" href="{{ upload_url }}">📤 Subir Documento</a>
+                    {% set docs_url = url_for("documents.index") %}
+                    <a
+                      class="nav__item {% if path.startswith('/documents') and path != dash_url and path != upload_url %}is-active{% endif %}"
+                      href="{{ docs_url }}"
+                    >
+                      📁 Explorar
+                    </a>
 
-                    {% set docs_url = url_for('documents.index') %}
-                    <a class="nav__item {% if path.startswith('/documents') and path != '/documents/dashboard' and path != '/documents/upload' %}is-active{% endif %}" href="{{ docs_url }}">📁 Explorar</a>
-
-                    {% set cal_url = url_for('calendar.index') %}
-                    <a class="nav__item {% if path.startswith('/calendar') %}is-active{% endif %}" href="{{ cal_url }}">🗓️ Mi calendario</a>
+                    {% set cal_url = url_for("calendar.index") %}
+                    <a class="nav__item {% if path.startswith('/calendar') %}is-active{% endif %}" href="{{ cal_url }}">
+                      🗓️ Mi calendario
+                    </a>
 
                     {% if current_user.is_admin %}
-                      {% set admin_url = url_for('admin.index') %}
-                      <a class="nav__item {% if path.startswith('/admin') %}is-active{% endif %}" href="{{ admin_url }}">🛡️ Admin</a>
+                      {% set admin_url = url_for("admin.index") %}
+                      <a class="nav__item {% if path.startswith('/admin') %}is-active{% endif %}" href="{{ admin_url }}">
+                        🛡️ Admin
+                      </a>
                     {% endif %}
 
                     <div class="nav__sep" role="separator" aria-hidden="true"></div>
 
-                    <!-- ✅ ESTE era tu error: auth.logout debe existir -->
-                    {% set logout_url = url_for('auth.logout') %}
-                    <a class="nav__item nav__item--danger" href="{{ logout_url }}">🚪 Logout</a>
-
+                    <a class="nav__item nav__item--danger" href="{{ url_for('auth.logout') }}">🚪 Logout</a>
                   {% else %}
-                    {% set login_url = url_for('auth.login') %}
+                    {% set login_url = url_for("auth.login") %}
                     <a class="nav__item {% if path == login_url %}is-active{% endif %}" href="{{ login_url }}">🔐 Login</a>
                     <div class="nav__hint">Inicia sesión para acceder al repositorio.</div>
                   {% endif %}
@@ -115,12 +134,9 @@
     </main>
 
     <footer class="footer">
-      <div class="container">
-        © 2026 Municipalidad de Cunco | Sistema de Repositorio de Documentos | Desarrollo IT
-      </div>
+      <div class="container">© 2026 Municipalidad de Cunco | Sistema de Repositorio de Documentos | Desarrollo IT</div>
     </footer>
 
-    <!-- Confirm Modal -->
     <div id="confirmModal" class="modal" aria-hidden="true">
       <div class="modal__panel" role="dialog" aria-modal="true" aria-label="Confirmación">
         <div class="modal__head">
@@ -129,9 +145,7 @@
         </div>
         <div class="modal__body">
           <div class="muted" data-confirm-text>¿Confirmas esta acción?</div>
-
           <div style="height:12px;"></div>
-
           <div class="actions actions--row">
             <button class="btn btn--ghost" type="button" data-confirm-cancel>Cancelar</button>
             <button class="btn btn--danger" type="button" data-confirm-ok>Confirmar</button>
