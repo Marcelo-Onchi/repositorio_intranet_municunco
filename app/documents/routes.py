@@ -24,6 +24,9 @@ from app.models import Category, Document
 from . import bp
 
 
+# =========================
+# Helpers
+# =========================
 def _allowed_file(filename: str) -> bool:
     allowed = current_app.config.get("ALLOWED_EXTENSIONS") or set()
     if not allowed:
@@ -46,20 +49,64 @@ def _parse_date_ddmmyyyy(raw: str) -> Optional[datetime]:
     return None
 
 
+def _get_gc_status_and_items() -> tuple[bool, list[dict], list[dict]]:
+    """
+    Retorna:
+      - gc_connected: bool
+      - deadlines_7d: list[dict] (eventos tipo "📌 Subir:" dentro de 7 días)
+      - upcoming_events: list[dict] (próximos eventos generales)
+
+    Best-effort:
+    - Si no existe GoogleToken o falla Google API, no revienta el dashboard.
+    """
+    gc_connected = False
+    deadlines_7d: list[dict] = []
+    upcoming_events: list[dict] = []
+
+    # 1) Detectar token en BD
+    try:
+        from app.models import GoogleToken  # type: ignore
+
+        token = GoogleToken.query.filter_by(user_id=current_user.id).first()
+        gc_connected = bool(token)
+    except Exception:
+        gc_connected = False
+
+    # 2) Si está conectado, traer info desde tu google_service.py
+    if gc_connected:
+        try:
+            from app.calendar_bp.google_service import (
+                list_upcoming_deadlines_7d,
+                list_upcoming_events,
+            )
+
+            deadlines_7d = list_upcoming_deadlines_7d(current_user.id, days=7) or []
+            upcoming_events = list_upcoming_events(current_user.id, days=30, max_results=5) or []
+        except Exception:
+            deadlines_7d = []
+            upcoming_events = []
+
+    return gc_connected, deadlines_7d, upcoming_events
+
+
+# =========================
+# Dashboard
+# =========================
 @bp.get("/dashboard")
 @login_required
 def dashboard():
     total_docs = Document.query.count()
     total_cats = Category.query.count()
 
-    used_bytes = db.session.query(db.func.coalesce(db.func.sum(Document.file_size), 0)).scalar() or 0
+    used_bytes = (
+        db.session.query(db.func.coalesce(db.func.sum(Document.file_size), 0)).scalar() or 0
+    )
     used_mb = round((used_bytes / 1024 / 1024), 2)
 
     last_doc = Document.query.order_by(Document.created_at.desc()).first()
     last_doc_name = last_doc.name if last_doc else "Ninguno"
 
-    # Calendar: placeholder (conectar/estado lo manejas en calendar_bp)
-    gc_connected = False
+    gc_connected, deadlines_7d, upcoming_events = _get_gc_status_and_items()
 
     return render_template(
         "dashboard.html",
@@ -68,9 +115,14 @@ def dashboard():
         used_mb=used_mb,
         last_doc_name=last_doc_name,
         gc_connected=gc_connected,
+        deadlines_7d=deadlines_7d,
+        upcoming_events=upcoming_events,
     )
 
 
+# =========================
+# Listado / Explorer
+# =========================
 @bp.get("/")
 @login_required
 def index():
@@ -111,6 +163,9 @@ def index():
     )
 
 
+# =========================
+# Subida
+# =========================
 @bp.get("/upload")
 @login_required
 def upload():
@@ -129,7 +184,7 @@ def upload_post():
         flash("Selecciona al menos un archivo.", "warning")
         return redirect(url_for("documents.upload"))
 
-    upload_path: Path = current_app.config["UPLOAD_PATH"]
+    upload_path = Path(current_app.config["UPLOAD_PATH"])
     upload_path.mkdir(parents=True, exist_ok=True)
 
     saved = 0
@@ -180,12 +235,14 @@ def upload_post():
     return redirect(url_for("documents.index"))
 
 
+# =========================
+# Preview / Download
+# =========================
 @bp.get("/preview/<int:doc_id>")
 @login_required
 def preview(doc_id: int):
     doc = Document.query.get_or_404(doc_id)
 
-    # Permisos: por ahora cualquiera autenticado puede ver
     path = Path(doc.path)
     if not path.exists():
         flash("Archivo no encontrado en disco.", "danger")
@@ -194,7 +251,6 @@ def preview(doc_id: int):
     mime, _ = mimetypes.guess_type(doc.filename)
     mime = mime or "application/octet-stream"
 
-    # Solo inline para PDF e imágenes. El resto, mejor descargar.
     is_inline = mime.startswith("image/") or mime == "application/pdf"
     if not is_inline:
         flash("Vista previa disponible solo para PDF e imágenes. Descarga para abrir.", "info")
@@ -217,6 +273,9 @@ def download(doc_id: int):
     return send_file(path, mimetype=mime, as_attachment=True, download_name=doc.filename)
 
 
+# =========================
+# Delete
+# =========================
 @bp.post("/delete/<int:doc_id>")
 @login_required
 def delete(doc_id: int):

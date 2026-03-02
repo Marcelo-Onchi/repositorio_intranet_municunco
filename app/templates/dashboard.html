@@ -29,7 +29,10 @@
 
     <hr class="hr" />
 
-    <h2 class="h2">Vencimientos (próx. 7 días)</h2>
+    <div class="section-head">
+      <h2 class="h2">Vencimientos (próx. 7 días)</h2>
+      <div class="muted">Recordatorios creados con el formato <strong>📌 Subir:</strong> en tu Google Calendar.</div>
+    </div>
 
     {% if not gc_connected %}
       <div class="callout callout--warn">
@@ -39,6 +42,11 @@
         </div>
         <a class="btn btn--small" href="{{ url_for('calendar.connect') }}">Conectar Google Calendar</a>
       </div>
+
+      <div class="muted" style="margin-top: 10px;">
+        Tip: una vez conectado, aquí aparecerán automáticamente tus eventos “📌 Subir: …”.
+      </div>
+
     {% else %}
       <div class="callout callout--ok">
         <div class="callout__text">
@@ -47,8 +55,87 @@
         </div>
         <a class="btn btn--ghost btn--small" href="{{ url_for('calendar.index') }}">Ver mi calendario</a>
       </div>
-    {% endif %}
 
-    {# Si después agregas lista de eventos, puedes renderizarla aquí #}
+      {% if deadlines_7d and deadlines_7d|length > 0 %}
+        <div class="table-wrap" style="margin-top: 14px;">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Fecha</th>
+                <th>Vencimiento</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for ev in deadlines_7d %}
+                {% set when = ev.when or '' %}
+                <tr>
+                  <td>
+                    {% if ev.date %}
+                      {{ ev.date.strftime("%d-%m-%Y") }}
+                    {% else %}
+                      <span class="muted">{{ when }}</span>
+                    {% endif %}
+                  </td>
+                  <td>
+                    <div style="font-weight: 600;">
+                      {{ ev.summary or "(sin título)" }}
+                    </div>
+                    {% if when %}
+                      <div class="muted" style="font-size: 0.95em;">{{ when }}</div>
+                    {% endif %}
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% else %}
+        <div class="callout" style="margin-top: 14px;">
+          <div class="callout__text">
+            <strong>Sin vencimientos próximos.</strong>
+            <div class="muted">No hay eventos “📌 Subir:” dentro de los próximos 7 días.</div>
+          </div>
+        </div>
+      {% endif %}
+
+      <hr class="hr" style="margin: 18px 0;" />
+
+      <div class="section-head">
+        <h2 class="h2">Próximos eventos</h2>
+        <div class="muted">Vista rápida (máx. 5). No solo vencimientos.</div>
+      </div>
+
+      {% if upcoming_events and upcoming_events|length > 0 %}
+        <div class="table-wrap" style="margin-top: 12px;">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Cuándo</th>
+                <th>Evento</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for ev in upcoming_events %}
+                <tr>
+                  <td>
+                    <span class="muted">{{ ev.when or '' }}</span>
+                  </td>
+                  <td>
+                    <div style="font-weight: 600;">{{ ev.summary or "(sin título)" }}</div>
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% else %}
+        <div class="callout" style="margin-top: 12px;">
+          <div class="callout__text">
+            <strong>No hay eventos próximos.</strong>
+            <div class="muted">Tu calendario no tiene eventos en el rango configurado.</div>
+          </div>
+        </div>
+      {% endif %}
+    {% endif %}
   </div>
 {% endblock %}

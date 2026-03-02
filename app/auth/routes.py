@@ -1,9 +1,10 @@
 from __future__ import annotations
 
 import re
+from urllib.parse import urlparse
 
 from flask import flash, redirect, render_template, request, url_for
-from flask_login import login_required, login_user, logout_user
+from flask_login import current_user, login_required, login_user, logout_user
 
 from app.extensions import db
 from app.models import User
@@ -14,7 +15,7 @@ _USERNAME_RE = re.compile(r"^[a-zA-Z0-9._-]{3,32}$")
 
 
 def _normalize_username(value: str) -> str:
-    return (value or "").strip()
+    return (value or "").strip().lower()
 
 
 def _normalize_email(value: str) -> str:
@@ -26,8 +27,33 @@ def _is_valid_email(email: str) -> bool:
     return "@" in email and "." in email and len(email) >= 6
 
 
+def _safe_next_url(next_url: str | None) -> str | None:
+    """
+    Evita open redirect:
+    - Permitimos solo paths internos tipo /documents/dashboard
+    - Si viene vacío o externo, devolvemos None
+    """
+    if not next_url:
+        return None
+
+    next_url = next_url.strip()
+    parsed = urlparse(next_url)
+
+    # Si trae scheme o netloc => externo, se rechaza
+    if parsed.scheme or parsed.netloc:
+        return None
+
+    # Solo paths internos
+    if not next_url.startswith("/"):
+        return None
+
+    return next_url
+
+
 @bp.get("/login")
 def login():
+    if current_user.is_authenticated:
+        return redirect(url_for("documents.dashboard"))
     return render_template("auth/login.html")
 
 
@@ -48,12 +74,14 @@ def login_post():
     login_user(user)
     flash("Bienvenido/a ✅", "success")
 
-    nxt = request.args.get("next")
+    nxt = _safe_next_url(request.args.get("next"))
     return redirect(nxt or url_for("documents.dashboard"))
 
 
 @bp.get("/register")
 def register():
+    if current_user.is_authenticated:
+        return redirect(url_for("documents.dashboard"))
     return render_template("auth/register.html")
 
 
@@ -65,7 +93,7 @@ def register_post():
     password = request.form.get("password") or ""
     password2 = request.form.get("password2") or ""
 
-    # Validaciones
+    # Validaciones base
     if not username:
         flash("Debes ingresar un usuario.", "error")
         return redirect(url_for("auth.register"))
@@ -103,8 +131,8 @@ def register_post():
         flash("Ese correo ya está registrado.", "error")
         return redirect(url_for("auth.register"))
 
-    # Crear
-    user = User(username=username, email=email, full_name=full_name)
+    # Crear (por defecto no admin)
+    user = User(username=username, email=email, full_name=full_name, is_admin=False, is_active=True)
     user.set_password(password)
 
     db.session.add(user)

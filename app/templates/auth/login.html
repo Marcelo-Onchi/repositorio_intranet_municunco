@@ -2,33 +2,50 @@
 {% block title %}Login — Repositorio{% endblock %}
 
 {% block content %}
-  <div class="card card--big auth-card">
-    <div class="auth-head">
-      <h1 class="h1 center">Iniciar sesión</h1>
-      <p class="muted center">Acceso al Repositorio Intranet Municunco</p>
+  <div class="auth-shell">
+    <div class="auth-panel">
+      <div class="auth-panel__icon" aria-hidden="true">🔐</div>
+
+      <h1 class="auth-panel__title">Iniciar sesión</h1>
+      <p class="auth-panel__sub">Acceso al Repositorio Intranet Municunco</p>
+
+      <form method="POST" action="{{ url_for('auth.login_post') }}" class="form">
+        <div class="form__row">
+          <label class="label" for="username">Usuario</label>
+          <input
+            class="input"
+            id="username"
+            type="text"
+            name="username"
+            placeholder="ej: admin"
+            autocomplete="username"
+            required
+          />
+          <div class="help">El usuario no lleva @ (el correo se usa solo para registro).</div>
+        </div>
+
+        <div class="form__row">
+          <label class="label" for="password">Contraseña</label>
+          <input
+            class="input"
+            id="password"
+            type="password"
+            name="password"
+            autocomplete="current-password"
+            required
+          />
+        </div>
+
+        <button class="btn auth-btn" type="submit">Entrar</button>
+
+        <div class="auth-links">
+          <a class="auth-link" href="{{ url_for('auth.register') }}">Crear usuario</a>
+        </div>
+
+        <p class="muted small center" style="margin-top: 10px;">
+          Admin inicial desde .env (ADMIN_EMAIL / ADMIN_PASSWORD).
+        </p>
+      </form>
     </div>
-
-    <form method="POST" action="{{ url_for('auth.login_post') }}" class="form">
-      <div class="form__row">
-        <label class="label" for="username">Usuario</label>
-        <input class="input" id="username" name="username" placeholder="ej: mmontoya" autocomplete="username" required />
-        <div class="muted small">El usuario no lleva @ (el correo se usa solo para registro).</div>
-      </div>
-
-      <div class="form__row">
-        <label class="label" for="password">Contraseña</label>
-        <input class="input" id="password" type="password" name="password" autocomplete="current-password" required />
-      </div>
-
-      <button class="btn" type="submit">Entrar</button>
-
-      <div class="muted small" style="margin-top:10px;">
-        ¿No tienes cuenta? <a href="{{ url_for('auth.register') }}" style="text-decoration:underline;">Crear usuario</a>
-      </div>
-
-      <p class="muted small" style="margin-top:10px;">
-        Admin inicial desde .env (ADMIN_EMAIL / ADMIN_PASSWORD).
-      </p>
-    </form>
   </div>
 {% endblock %}

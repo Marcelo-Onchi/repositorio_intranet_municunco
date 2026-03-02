@@ -42,7 +42,7 @@
       {% if messages %}
         <div class="toasts" aria-live="polite" aria-atomic="true">
           {% for category, message in messages %}
-            <div class="toast toast--{{ category|e }}" role="status">
+            <div class="toast toast--{{ category|e }}" role="status" data-toast>
               <div class="toast__icon" aria-hidden="true"></div>
               <div class="toast__body">
                 <div class="toast__title">
@@ -50,38 +50,48 @@
                 </div>
                 <div class="toast__text">{{ message }}</div>
               </div>
-              <button class="toast__close" type="button" aria-label="Cerrar">×</button>
+              <button class="toast__close" type="button" aria-label="Cerrar" data-toast-close>×</button>
             </div>
           {% endfor %}
         </div>
       {% endif %}
     {% endwith %}
 
-    {% set hide_sidebar = request.path.startswith('/auth') %}
+    {% set is_auth = request.path.startswith('/auth') %}
+    {% set ep = request.endpoint or '' %}
 
     <main id="main" class="page">
       <div class="container">
-        <div class="layout">
-          {% if not hide_sidebar %}
+        <div class="layout {% if is_auth %}layout--auth{% endif %}">
+          {% if not is_auth %}
             <aside class="sidebar" aria-label="Menú lateral">
               <div class="card">
                 <div class="card__title">MENÚ</div>
 
                 <nav class="nav">
                   {% if current_user.is_authenticated %}
-                    <a class="nav__item" href="{{ url_for('documents.dashboard') }}">📊 Dashboard</a>
-                    <a class="nav__item" href="{{ url_for('documents.upload') }}">📤 Subir Documento</a>
-                    <a class="nav__item" href="{{ url_for('documents.index') }}">📁 Explorar</a>
-                    <a class="nav__item" href="{{ url_for('calendar.index') }}">🗓️ Mi calendario</a>
+                    <a class="nav__item {{ 'is-active' if ep == 'documents.dashboard' else '' }}"
+                       href="{{ url_for('documents.dashboard') }}">📊 Dashboard</a>
+
+                    <a class="nav__item {{ 'is-active' if ep in ['documents.upload', 'documents.upload_post'] else '' }}"
+                       href="{{ url_for('documents.upload') }}">📤 Subir Documento</a>
+
+                    <a class="nav__item {{ 'is-active' if ep == 'documents.index' else '' }}"
+                       href="{{ url_for('documents.index') }}">📁 Explorar</a>
+
+                    <a class="nav__item {{ 'is-active' if ep.startswith('calendar.') else '' }}"
+                       href="{{ url_for('calendar.index') }}">🗓️ Mi calendario</a>
 
                     {% if current_user.is_admin %}
-                      <a class="nav__item" href="{{ url_for('admin.index') }}">🛡️ Admin</a>
+                      <a class="nav__item {{ 'is-active' if ep.startswith('admin.') else '' }}"
+                         href="{{ url_for('admin.index') }}">🛡️ Admin</a>
                     {% endif %}
 
                     <div class="nav__sep" role="separator" aria-hidden="true"></div>
                     <a class="nav__item nav__item--danger" href="{{ url_for('auth.logout') }}">🚪 Logout</a>
                   {% else %}
-                    <a class="nav__item" href="{{ url_for('auth.login') }}">🔐 Login</a>
+                    <a class="nav__item {{ 'is-active' if ep == 'auth.login' else '' }}"
+                       href="{{ url_for('auth.login') }}">🔐 Login</a>
                     <div class="nav__hint">Inicia sesión para acceder al repositorio.</div>
                   {% endif %}
                 </nav>
@@ -89,7 +99,7 @@
             </aside>
           {% endif %}
 
-          <section class="content" aria-label="Contenido principal">
+          <section class="content {% if is_auth %}content--auth{% endif %}" aria-label="Contenido principal">
             {% block content %}{% endblock %}
           </section>
         </div>
