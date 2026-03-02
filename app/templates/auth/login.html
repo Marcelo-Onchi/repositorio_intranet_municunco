@@ -21,7 +21,7 @@
             autocomplete="username"
             required
           />
-          <div class="help">El usuario no lleva @ (el correo se usa solo para registro).</div>
+          <div class="help">El usuario no lleva @.</div>
         </div>
 
         <div class="form__row">
@@ -38,12 +38,8 @@
 
         <button class="btn auth-btn" type="submit">Entrar</button>
 
-        <div class="auth-links">
-          <a class="auth-link" href="{{ url_for('auth.register') }}">Crear usuario</a>
-        </div>
-
         <p class="muted small center" style="margin-top: 10px;">
-          Admin inicial desde .env (ADMIN_EMAIL / ADMIN_PASSWORD).
+          Si necesitas cuenta, solicítala a un administrador.
         </p>
       </form>
     </div>

@@ -10,7 +10,6 @@ from app.extensions import db
 from app.models import User
 from . import bp
 
-
 _USERNAME_RE = re.compile(r"^[a-zA-Z0-9._-]{3,32}$")
 
 
@@ -39,11 +38,9 @@ def _safe_next_url(next_url: str | None) -> str | None:
     next_url = next_url.strip()
     parsed = urlparse(next_url)
 
-    # Si trae scheme o netloc => externo, se rechaza
     if parsed.scheme or parsed.netloc:
         return None
 
-    # Solo paths internos
     if not next_url.startswith("/"):
         return None
 
@@ -68,7 +65,7 @@ def login_post():
 
     user = User.query.filter_by(username=username).first()
     if not user or not user.is_active or not user.check_password(password):
-        flash("Credenciales inválidas.", "error")
+        flash("Credenciales inválidas o usuario desactivado.", "error")
         return redirect(url_for("auth.login"))
 
     login_user(user)
@@ -80,6 +77,8 @@ def login_post():
 
 @bp.get("/register")
 def register():
+    # Opcional: si quieres que SOLO admin cree usuarios, comenta esta ruta
+    # y quita el link "Crear usuario" del login.html.
     if current_user.is_authenticated:
         return redirect(url_for("documents.dashboard"))
     return render_template("auth/register.html")
@@ -93,7 +92,6 @@ def register_post():
     password = request.form.get("password") or ""
     password2 = request.form.get("password2") or ""
 
-    # Validaciones base
     if not username:
         flash("Debes ingresar un usuario.", "error")
         return redirect(url_for("auth.register"))
@@ -122,7 +120,6 @@ def register_post():
         flash("Las contraseñas no coinciden.", "error")
         return redirect(url_for("auth.register"))
 
-    # Unicidad
     if User.query.filter_by(username=username).first():
         flash("Ese usuario ya existe.", "error")
         return redirect(url_for("auth.register"))
@@ -131,8 +128,13 @@ def register_post():
         flash("Ese correo ya está registrado.", "error")
         return redirect(url_for("auth.register"))
 
-    # Crear (por defecto no admin)
-    user = User(username=username, email=email, full_name=full_name, is_admin=False, is_active=True)
+    user = User(
+        username=username,
+        email=email,
+        full_name=full_name,
+        is_admin=False,
+        is_active=True,
+    )
     user.set_password(password)
 
     db.session.add(user)

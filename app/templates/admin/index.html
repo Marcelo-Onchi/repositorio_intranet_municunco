@@ -2,144 +2,298 @@
 {% block title %}Admin{% endblock %}
 
 {% block content %}
-  <div class="page-head">
-    <h1 class="h1">Admin</h1>
-    <div class="page-sub">Gestión de usuarios y categorías (solo administradores).</div>
-  </div>
+  <div class="card card--big">
+    <div class="page-head">
+      <h1 class="h1">Admin</h1>
+      <p class="muted">Gestión de usuarios y categorías (solo administradores).</p>
+    </div>
 
-  <div class="stats" style="grid-template-columns: repeat(3, minmax(0, 1fr));">
-    <div class="stat">
-      <div class="stat__label">Usuarios</div>
-      <div class="stat__value">{{ users|length }}</div>
-    </div>
-    <div class="stat">
-      <div class="stat__label">Categorías</div>
-      <div class="stat__value">{{ categories|length }}</div>
-    </div>
-    <div class="stat">
-      <div class="stat__label">Tu sesión</div>
-      <div class="stat__value" style="font-size:14px; margin-top:10px;">
-        {{ current_user.username }} (ADMIN)
+    <div class="stats">
+      <div class="stat">
+        <div class="stat__label">Usuarios</div>
+        <div class="stat__value">{{ users|length }}</div>
       </div>
-    </div>
-  </div>
-
-  <div class="hr"></div>
-
-  <div class="card">
-    <div class="h2">👥 Usuarios</div>
-    <div class="muted" style="margin-top:6px;">Activa/desactiva usuarios y administra permisos.</div>
-
-    <div style="height:12px;"></div>
-
-    <table class="table">
-      <thead>
-        <tr>
-          <th>Usuario</th>
-          <th>Correo</th>
-          <th>Estado</th>
-          <th>Rol</th>
-          <th>Creado</th>
-          <th>Acciones</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for u in users %}
-          <tr>
-            <td><strong>{{ u.username }}</strong><div class="help">{{ u.full_name }}</div></td>
-            <td>{{ u.email }}</td>
-            <td>
-              {% if u.is_active %}
-                <span class="badge">✅ Activo</span>
-              {% else %}
-                <span class="badge">⛔ Desactivado</span>
-              {% endif %}
-            </td>
-            <td>
-              {% if u.is_admin %}
-                <span class="badge">🛡️ Admin</span>
-              {% else %}
-                <span class="badge">👤 Usuario</span>
-              {% endif %}
-            </td>
-            <td>{{ u.created_at.strftime("%d-%m-%Y %H:%M") }}</td>
-            <td>
-              <div class="actions">
-                {% if u.id != current_user.id %}
-                  <form method="POST" action="{{ url_for('admin.toggle_user_active', user_id=u.id) }}">
-                    <button class="btn btn--ghost btn--small" type="submit">
-                      {% if u.is_active %}Desactivar{% else %}Activar{% endif %}
-                    </button>
-                  </form>
-
-                  <form method="POST" action="{{ url_for('admin.toggle_user_admin', user_id=u.id) }}">
-                    <button class="btn btn--ghost btn--small" type="submit">
-                      {% if u.is_admin %}Quitar admin{% else %}Hacer admin{% endif %}
-                    </button>
-                  </form>
-                {% else %}
-                  <span class="muted small">Tu cuenta</span>
-                {% endif %}
-              </div>
-            </td>
-          </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  </div>
-
-  <div style="height:12px;"></div>
-
-  <div class="card">
-    <div class="h2">🏷️ Categorías</div>
-    <div class="muted" style="margin-top:6px;">Crea categorías para ordenar documentos.</div>
-
-    <div style="height:12px;"></div>
-
-    <form method="POST" action="{{ url_for('admin.create_category') }}" class="toolbar">
-      <div class="toolbar__left" style="flex:1;">
-        <div class="form__row" style="flex:1; min-width:260px;">
-          <label class="label" for="name">Nueva categoría</label>
-          <input class="input" id="name" name="name" placeholder="Ej: Contratos, Resoluciones, Actas..." required />
+      <div class="stat">
+        <div class="stat__label">Categorías</div>
+        <div class="stat__value">{{ categories|length }}</div>
+      </div>
+      <div class="stat">
+        <div class="stat__label">Tu sesión</div>
+        <div class="stat__value is-truncate" title="{{ current_user.username }} (ADMIN)">
+          {{ current_user.username }} (ADMIN)
         </div>
       </div>
-      <div class="toolbar__right">
-        <button class="btn" type="submit">Agregar</button>
+      <div class="stat">
+        <div class="stat__label">Estado</div>
+        <div class="stat__value">Operativo</div>
       </div>
-    </form>
+    </div>
 
-    <div style="height:10px;"></div>
+    <hr class="hr" />
 
-    {% if categories %}
-      <table class="table">
+    <!-- =========================
+         USUARIOS
+    ========================== -->
+    <div class="section-head">
+      <h2 class="h2">👥 Usuarios</h2>
+      <div class="muted">Crea, edita, desactiva o elimina cuentas.</div>
+    </div>
+
+    <!-- Crear usuario -->
+    <div class="card" style="margin-top: 12px;">
+      <div class="card__title">CREAR USUARIO</div>
+
+      <form method="POST" action="{{ url_for('admin.create_user') }}" class="form">
+        <div class="form__grid">
+          <div class="form__row">
+            <label class="label" for="cu_username">Usuario (sin @)</label>
+            <input class="input" id="cu_username" name="username" placeholder="ej: mmontoya" required />
+            <div class="help">3–32: letras/números/punto/guión/guión bajo.</div>
+          </div>
+
+          <div class="form__row">
+            <label class="label" for="cu_full_name">Nombre completo</label>
+            <input class="input" id="cu_full_name" name="full_name" placeholder="ej: Marcelo Montoya Mellado" required />
+          </div>
+
+          <div class="form__row">
+            <label class="label" for="cu_email">Correo</label>
+            <input class="input" id="cu_email" type="email" name="email" placeholder="ej: nombre@municunco.cl" required />
+          </div>
+
+          <div class="form__row">
+            <label class="label" for="cu_password">Contraseña</label>
+            <input class="input" id="cu_password" type="password" name="password" placeholder="mínimo 6 caracteres" required />
+          </div>
+        </div>
+
+        <div style="display:flex; gap:14px; flex-wrap:wrap; margin-top: 6px;">
+          <label style="display:flex; align-items:center; gap:8px; font-weight:900;">
+            <input type="checkbox" name="is_admin" />
+            Es administrador
+          </label>
+
+          <label style="display:flex; align-items:center; gap:8px; font-weight:900;">
+            <input type="checkbox" name="is_active" checked />
+            Usuario activo
+          </label>
+        </div>
+
+        <div style="height:10px;"></div>
+
+        <button class="btn" type="submit">Crear usuario</button>
+      </form>
+    </div>
+
+    <!-- Tabla usuarios -->
+    <div class="table-wrap" style="margin-top: 14px;">
+      <table class="table table--admin">
         <thead>
           <tr>
-            <th>Nombre</th>
+            <th>Usuario</th>
+            <th>Correo</th>
+            <th>Estado</th>
+            <th>Rol</th>
             <th>Creado</th>
-            <th>Acción</th>
+            <th>Acciones</th>
           </tr>
         </thead>
+
         <tbody>
-          {% for c in categories %}
+          {% for u in users %}
             <tr>
-              <td><strong>{{ c.name }}</strong></td>
-              <td>{{ c.created_at.strftime("%d-%m-%Y %H:%M") if c.created_at else "—" }}</td>
               <td>
-                <form method="POST" action="{{ url_for('admin.delete_category', cat_id=c.id) }}">
-                  <button class="btn btn--danger btn--small" type="submit"
-                    onclick="return confirm('¿Eliminar la categoría {{ c.name }}?')">
-                    Eliminar
-                  </button>
-                </form>
+                <div style="font-weight:950;">{{ u.username }}</div>
+                <div class="muted small is-truncate" title="{{ u.full_name or '' }}">{{ u.full_name or '—' }}</div>
+              </td>
+
+              <td class="is-truncate" title="{{ u.email }}">{{ u.email }}</td>
+
+              <td>
+                {% if u.is_active %}
+                  <span class="badge badge--ok">✅ Activo</span>
+                {% else %}
+                  <span class="badge badge--danger">⛔ Inactivo</span>
+                {% endif %}
+              </td>
+
+              <td>
+                {% if u.is_admin %}
+                  <span class="badge">🛡️ Admin</span>
+                {% else %}
+                  <span class="badge">👤 Usuario</span>
+                {% endif %}
+              </td>
+
+              <td class="muted small">
+                {{ u.created_at.strftime("%d-%m-%Y %H:%M") if u.created_at else "—" }}
+              </td>
+
+              <td>
+                {% if current_user.id == u.id %}
+                  <div class="muted small">Tu cuenta</div>
+                {% else %}
+                  <div class="actions">
+                    <!-- Editar -->
+                    <details class="admin-details">
+                      <summary class="btn btn--ghost btn--small" style="width:100%;">✏️ Editar</summary>
+
+                      <form method="POST" action="{{ url_for('admin.update_user', user_id=u.id) }}" class="form" style="margin-top:10px;">
+                        <div class="form__row">
+                          <label class="label">Usuario</label>
+                          <input class="input" name="username" value="{{ u.username }}" required />
+                        </div>
+
+                        <div class="form__row">
+                          <label class="label">Nombre completo</label>
+                          <input class="input" name="full_name" value="{{ u.full_name or '' }}" required />
+                        </div>
+
+                        <div class="form__row">
+                          <label class="label">Correo</label>
+                          <input class="input" type="email" name="email" value="{{ u.email }}" required />
+                        </div>
+
+                        <div style="display:flex; gap:14px; flex-wrap:wrap;">
+                          <label style="display:flex; align-items:center; gap:8px; font-weight:900;">
+                            <input type="checkbox" name="is_admin" {% if u.is_admin %}checked{% endif %} />
+                            Admin
+                          </label>
+
+                          <label style="display:flex; align-items:center; gap:8px; font-weight:900;">
+                            <input type="checkbox" name="is_active" {% if u.is_active %}checked{% endif %} />
+                            Activo
+                          </label>
+                        </div>
+
+                        <button class="btn btn--small" type="submit">Guardar cambios</button>
+                      </form>
+                    </details>
+
+                    <!-- Reset password -->
+                    <details class="admin-details">
+                      <summary class="btn btn--ghost btn--small" style="width:100%;">🔑 Reset contraseña</summary>
+
+                      <form method="POST" action="{{ url_for('admin.reset_password', user_id=u.id) }}" class="form" style="margin-top:10px;">
+                        <div class="form__row">
+                          <label class="label">Nueva contraseña</label>
+                          <input class="input" type="password" name="password" placeholder="mínimo 6 caracteres" required />
+                        </div>
+                        <button class="btn btn--small" type="submit">Actualizar contraseña</button>
+                      </form>
+                    </details>
+
+                    <!-- Toggle active -->
+                    <form method="POST" action="{{ url_for('admin.toggle_user_active', user_id=u.id) }}">
+                      <button
+                        class="btn btn--small {% if u.is_active %}btn--ghost{% else %}{% endif %}"
+                        type="submit"
+                        data-confirm="¿Seguro que quieres {{ 'desactivar' if u.is_active else 'activar' }} este usuario?"
+                        data-confirm-title="Confirmar"
+                        data-confirm-ok="Sí, continuar"
+                      >
+                        {% if u.is_active %}⛔ Desactivar{% else %}✅ Activar{% endif %}
+                      </button>
+                    </form>
+
+                    <!-- Toggle admin -->
+                    <form method="POST" action="{{ url_for('admin.toggle_user_admin', user_id=u.id) }}">
+                      <button
+                        class="btn btn--small btn--ghost"
+                        type="submit"
+                        data-confirm="¿Seguro que quieres {{ 'quitar' if u.is_admin else 'dar' }} permisos de admin?"
+                        data-confirm-title="Confirmar"
+                        data-confirm-ok="Sí, continuar"
+                      >
+                        {% if u.is_admin %}🧯 Quitar admin{% else %}🛡️ Hacer admin{% endif %}
+                      </button>
+                    </form>
+
+                    <!-- Delete -->
+                    <form method="POST" action="{{ url_for('admin.delete_user', user_id=u.id) }}">
+                      <button
+                        class="btn btn--small btn--danger"
+                        type="submit"
+                        data-confirm="Esto eliminará al usuario de forma permanente. ¿Continuar?"
+                        data-confirm-title="Eliminar usuario"
+                        data-confirm-ok="Sí, eliminar"
+                      >
+                        🗑️ Eliminar
+                      </button>
+                    </form>
+                  </div>
+                {% endif %}
               </td>
             </tr>
           {% endfor %}
         </tbody>
       </table>
-    {% else %}
-      <div class="center" style="padding:14px;">
-        <div class="muted">Aún no hay categorías.</div>
-      </div>
-    {% endif %}
+    </div>
+
+    <hr class="hr" />
+
+    <!-- =========================
+         CATEGORÍAS
+    ========================== -->
+    <div class="section-head">
+      <h2 class="h2">🏷️ Categorías</h2>
+      <div class="muted">Crea categorías para ordenar documentos.</div>
+    </div>
+
+    <div class="card" style="margin-top: 12px;">
+      <div class="card__title">NUEVA CATEGORÍA</div>
+
+      <form method="POST" action="{{ url_for('admin.create_category') }}" class="form" style="margin-top:0;">
+        <div class="form__grid" style="grid-template-columns: 1fr 140px;">
+          <div class="form__row">
+            <input class="input" name="name" placeholder="Ej: Contratos, Resoluciones, Actas..." required />
+          </div>
+          <div class="form__row">
+            <button class="btn" type="submit">Agregar</button>
+          </div>
+        </div>
+      </form>
+
+      {% if categories and categories|length %}
+        <div class="table-wrap" style="margin-top: 12px;">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Categoría</th>
+                <th style="width:180px;">Acciones</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for c in categories %}
+                <tr>
+                  <td style="font-weight:950;">{{ c.name }}</td>
+                  <td>
+                    <form method="POST" action="{{ url_for('admin.delete_category', cat_id=c.id) }}">
+                      <button
+                        class="btn btn--danger btn--small"
+                        type="submit"
+                        data-confirm="¿Eliminar esta categoría?"
+                        data-confirm-title="Confirmar"
+                        data-confirm-ok="Sí, eliminar"
+                      >
+                        🗑️ Eliminar
+                      </button>
+                    </form>
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% else %}
+        <div class="callout" style="margin-top: 12px;">
+          <div class="callout__text">
+            <strong>Aún no hay categorías.</strong>
+            <div class="muted">Crea una para ordenar documentos.</div>
+          </div>
+        </div>
+      {% endif %}
+    </div>
+
   </div>
 {% endblock %}
