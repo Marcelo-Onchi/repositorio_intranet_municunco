@@ -2,149 +2,144 @@
 {% block title %}Dashboard{% endblock %}
 
 {% block content %}
-  <div class="card card--big">
-    <div class="page-head">
-      <h1 class="h1">Dashboard</h1>
-      <p class="muted">Resumen del repositorio y vencimientos próximos.</p>
-    </div>
+<div class="card card--big">
 
-    <div class="stats">
-      <div class="stat">
-        <div class="stat__label">Total de Documentos</div>
-        <div class="stat__value">{{ total_docs }}</div>
-      </div>
-      <div class="stat">
-        <div class="stat__label">Categorías</div>
-        <div class="stat__value">{{ total_cats }}</div>
-      </div>
-      <div class="stat">
-        <div class="stat__label">Espacio Usado (MB)</div>
-        <div class="stat__value">{{ used_mb }}</div>
-      </div>
-      <div class="stat">
-        <div class="stat__label">Último Documento</div>
-        <div class="stat__value is-truncate" title="{{ last_doc_name }}">{{ last_doc_name }}</div>
-      </div>
-    </div>
-
-    <hr class="hr" />
-
-    <div class="section-head">
-      <h2 class="h2">Vencimientos (próx. 7 días)</h2>
-      <div class="muted">
-        Si Google Calendar está conectado, se muestran eventos “📌 Subir:”.
-        Si no, se muestran vencimientos guardados en el sistema.
-      </div>
-    </div>
-
-    {% if not gc_connected %}
-      <div class="callout callout--warn">
-        <div class="callout__text">
-          <strong>⚠️ Google Calendar no conectado.</strong>
-          <div class="muted">Conéctalo para sincronizar recordatorios con tu cuenta.</div>
-        </div>
-        <a class="btn btn--small" href="{{ url_for('calendar.connect') }}">Conectar Google Calendar</a>
-      </div>
-
-      {% if db_deadlines_7d and db_deadlines_7d|length %}
-        <div class="table-wrap" style="margin-top: 14px;">
-          <table class="table">
-            <thead>
-              <tr>
-                <th>Fecha</th>
-                <th>Documento</th>
-              </tr>
-            </thead>
-            <tbody>
-              {% for d in db_deadlines_7d %}
-                <tr>
-                  <td>{{ d.due_date.strftime("%d-%m-%Y") if d.due_date else "—" }}</td>
-                  <td style="font-weight:900;">{{ d.name }}</td>
-                </tr>
-              {% endfor %}
-            </tbody>
-          </table>
-        </div>
-      {% else %}
-        <div class="callout" style="margin-top: 14px;">
-          <div class="callout__text">
-            <strong>Sin vencimientos próximos.</strong>
-            <div class="muted">No hay documentos con fecha límite dentro de 7 días.</div>
-          </div>
-        </div>
-      {% endif %}
-
-    {% else %}
-      <div class="callout callout--ok">
-        <div class="callout__text">
-          <strong>✅ Google Calendar conectado.</strong>
-          <div class="muted">Tus vencimientos se muestran desde tu calendario.</div>
-        </div>
-        <a class="btn btn--ghost btn--small" href="{{ url_for('calendar.index') }}">Ver mi calendario</a>
-      </div>
-
-      {% if deadlines_7d and deadlines_7d|length %}
-        <div class="table-wrap" style="margin-top: 14px;">
-          <table class="table">
-            <thead>
-              <tr>
-                <th>Cuándo</th>
-                <th>Vencimiento</th>
-              </tr>
-            </thead>
-            <tbody>
-              {% for ev in deadlines_7d %}
-                <tr>
-                  <td><span class="muted">{{ ev.when or "—" }}</span></td>
-                  <td style="font-weight:900;">{{ ev.summary or "(sin título)" }}</td>
-                </tr>
-              {% endfor %}
-            </tbody>
-          </table>
-        </div>
-      {% else %}
-        <div class="callout" style="margin-top: 14px;">
-          <div class="callout__text">
-            <strong>Sin vencimientos próximos.</strong>
-            <div class="muted">No hay eventos “📌 Subir:” dentro de los próximos 7 días.</div>
-          </div>
-        </div>
-      {% endif %}
-
-      <hr class="hr" style="margin: 18px 0;" />
-
-      <div class="section-head">
-        <h2 class="h2">Próximos eventos</h2>
-        <div class="muted">Vista rápida (máx. 5).</div>
-      </div>
-
-      {% if upcoming_events and upcoming_events|length %}
-        <div class="table-wrap" style="margin-top: 12px;">
-          <table class="table">
-            <thead>
-              <tr>
-                <th>Cuándo</th>
-                <th>Evento</th>
-              </tr>
-            </thead>
-            <tbody>
-              {% for ev in upcoming_events %}
-                <tr>
-                  <td><span class="muted">{{ ev.when or "—" }}</span></td>
-                  <td style="font-weight:900;">{{ ev.summary or "(sin título)" }}</td>
-                </tr>
-              {% endfor %}
-            </tbody>
-          </table>
-        </div>
-      {% else %}
-        <div class="callout" style="margin-top: 12px;">
-          <div class="callout__text">
-            <strong>No hay eventos próximos.</strong>
-            <div class="muted">Tu calendario no tiene eventos en el rango configurado.</div>
-          </div>
-        </div>
-      {% endif %}
-    {% endif %}
+  <!-- =========================
+       HEADER
+  ========================== -->
+  <div class="page-head">
+    <h1 class="h1">Dashboard</h1>
+    <p class="muted">Resumen del repositorio y vencimientos próximos.</p>
   </div>
+
+  <!-- =========================
+       STATS
+  ========================== -->
+  <div class="stats">
+    <div class="stat">
+      <div class="stat__label">Total de Documentos</div>
+      <div class="stat__value">{{ total_docs }}</div>
+    </div>
+
+    <div class="stat">
+      <div class="stat__label">Categorías</div>
+      <div class="stat__value">{{ total_cats }}</div>
+    </div>
+
+    <div class="stat">
+      <div class="stat__label">Espacio Usado (MB)</div>
+      <div class="stat__value">{{ used_mb }}</div>
+    </div>
+
+    <div class="stat">
+      <div class="stat__label">Último Documento</div>
+      <div 
+        class="stat__value stat__truncate" 
+        title="{{ last_doc_name }}"
+      >
+        {{ last_doc_name }}
+      </div>
+    </div>
+  </div>
+
+  <hr class="hr" />
+
+  <!-- =========================
+       VENCIMIENTOS
+  ========================== -->
+  <div class="section-head">
+    <h2 class="h2">Vencimientos (próx. 7 días)</h2>
+    <div class="muted">
+      Si Google Calendar está conectado se muestran eventos “📌 Subir:”.
+      Si no, se muestran vencimientos guardados en el sistema.
+    </div>
+  </div>
+
+  {% if not gc_connected %}
+
+    <div class="callout callout--warn">
+      <div class="callout__text">
+        <strong>⚠️ Google Calendar no conectado.</strong>
+        <div class="muted">Conéctalo para sincronizar recordatorios con tu cuenta.</div>
+      </div>
+      <a class="btn btn--small" href="{{ url_for('calendar.connect') }}">
+        Conectar Google Calendar
+      </a>
+    </div>
+
+    {% if due_soon_docs and due_soon_docs|length %}
+      <div class="table-wrap mt">
+        <table class="table table--dashboard">
+          <thead>
+            <tr>
+              <th>Fecha</th>
+              <th>Documento</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for d in due_soon_docs %}
+              <tr>
+                <td>{{ d.due_date.strftime("%d-%m-%Y") }}</td>
+                <td class="td-strong td-truncate" title="{{ d.filename }}">
+                  {{ d.filename }}
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <div class="callout mt">
+        <div class="callout__text">
+          <strong>Sin vencimientos próximos.</strong>
+          <div class="muted">No hay documentos con fecha límite dentro de 7 días.</div>
+        </div>
+      </div>
+    {% endif %}
+
+  {% else %}
+
+    <div class="callout callout--ok">
+      <div class="callout__text">
+        <strong>✅ Google Calendar conectado.</strong>
+        <div class="muted">Tus vencimientos se muestran desde tu calendario.</div>
+      </div>
+      <a class="btn btn--ghost btn--small" href="{{ url_for('calendar.index') }}">
+        Ver mi calendario
+      </a>
+    </div>
+
+    {% if deadlines_7d and deadlines_7d|length %}
+      <div class="table-wrap mt">
+        <table class="table table--dashboard">
+          <thead>
+            <tr>
+              <th>Cuándo</th>
+              <th>Vencimiento</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for ev in deadlines_7d %}
+              <tr>
+                <td class="muted">{{ ev.when or "—" }}</td>
+                <td class="td-strong td-truncate" title="{{ ev.summary }}">
+                  {{ ev.summary or "(sin título)" }}
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <div class="callout mt">
+        <div class="callout__text">
+          <strong>Sin vencimientos próximos.</strong>
+          <div class="muted">No hay eventos “📌 Subir:” dentro de 7 días.</div>
+        </div>
+      </div>
+    {% endif %}
+
+  {% endif %}
+
+</div>
 {% endblock %}

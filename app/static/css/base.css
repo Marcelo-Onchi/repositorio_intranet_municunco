@@ -38,6 +38,21 @@ img{ max-width:100%; height:auto; }
 
 .container{ max-width:1160px; margin:0 auto; padding:0 16px; }
 
+/* Utilidades */
+.mt{ margin-top:14px; }
+.is-truncate{
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+.td-strong{ font-weight:900; }
+.td-truncate{
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  max-width:100%;
+}
+
 /* Accesibilidad */
 .skip-link{
   position:absolute;
@@ -193,6 +208,9 @@ img{ max-width:100%; height:auto; }
 .page-head{ margin-bottom: 12px; }
 .page-sub{ color: var(--c-text-3); margin-top: 6px; }
 
+/* Section head (dashboard / páginas) */
+.section-head{ margin-top: 8px; }
+
 /* Forms */
 .form{ margin-top: 14px; display:flex; flex-direction:column; gap: 12px; }
 .form__row{ display:flex; flex-direction:column; gap: 8px; }
@@ -239,6 +257,7 @@ img{ max-width:100%; height:auto; }
 .btn:hover{ background: var(--c-primary-2); }
 .btn:active{ transform: translateY(1px); }
 .btn--small{ padding: 9px 12px; font-size: 13px; }
+
 .btn--ghost{
   background: transparent;
   color: var(--c-primary-3);
@@ -248,12 +267,12 @@ img{ max-width:100%; height:auto; }
   background: rgba(2,132,199,.08);
   border-color: rgba(2,132,199,.40);
 }
-.btn--danger{
-  background: var(--c-error);
-}
-.btn--danger:hover{
-  background: #b91c1c;
-}
+
+.btn--danger{ background: var(--c-error); }
+.btn--danger:hover{ background: #b91c1c; }
+
+.btn[disabled]{ opacity: .55; cursor: not-allowed; }
+.btn[disabled]:hover{ background: transparent; }
 
 /* Stats */
 .stats{
@@ -266,9 +285,22 @@ img{ max-width:100%; height:auto; }
   border-radius: var(--r-10);
   padding: 14px;
   background: linear-gradient(180deg, #fff 0%, rgba(241,245,249,.6) 100%);
+  min-width: 0; /* 🔥 permite ellipsis dentro */
 }
 .stat__label{ font-size: 12px; font-weight: 900; color: var(--c-text-3); }
-.stat__value{ font-size: 22px; font-weight: 950; margin-top: 6px; }
+.stat__value{
+  font-size: 22px;
+  font-weight: 950;
+  margin-top: 6px;
+  min-width:0;
+}
+.stat__truncate{
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  display:block;
+  max-width:100%;
+}
 
 /* Callouts */
 .callout{
@@ -397,17 +429,21 @@ img{ max-width:100%; height:auto; }
   color: var(--c-text-2);
 }
 
+/* Table wrap (evita desbordes) */
+.table-wrap{
+  width:100%;
+  overflow-x:auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Tabla estable */
 .table{
   width:100%;
   border-collapse: collapse;
   border: 1px solid var(--c-border);
   border-radius: var(--r-10);
   overflow:hidden;
-}
-
-/* Clave: no dejes que textos largos rompan la tabla */
-.table th, .table td{
-  vertical-align: top;
+  table-layout: fixed; /* 🔥 clave */
 }
 .table th{
   text-align:left;
@@ -422,34 +458,49 @@ img{ max-width:100%; height:auto; }
   padding: 12px;
   border-top: 1px solid var(--c-border);
   font-size: 14px;
+  vertical-align: top;
+  min-width: 0;
 }
 .table tr:hover td{ background: rgba(241,245,249,.6); }
 
+/* widths por columna (Explorar) */
+.table--docs th:nth-child(1), .table--docs td:nth-child(1){ width: 42%; }
+.table--docs th:nth-child(2), .table--docs td:nth-child(2){ width: 14%; }
+.table--docs th:nth-child(3), .table--docs td:nth-child(3){ width: 14%; }
+.table--docs th:nth-child(4), .table--docs td:nth-child(4){ width: 12%; }
+.table--docs th:nth-child(5), .table--docs td:nth-child(5){ width: 10%; }
+.table--docs th:nth-child(6), .table--docs td:nth-child(6){ width: 190px; }
+
+/* Dashboard table */
+.table--dashboard th:nth-child(1), .table--dashboard td:nth-child(1){ width: 160px; }
+.table--dashboard th:nth-child(2), .table--dashboard td:nth-child(2){ width: auto; }
+
+/* Documento pill */
 .file-pill{
-  display:inline-flex;
-  align-items:center;
-  gap:8px;
-  max-width: 520px;
+  display:block;
+  max-width: 100%;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
   font-weight: 900;
   color: var(--c-primary-3);
 }
+.file-meta{ margin-top: 4px; }
 
-/* Acciones: orden pro (vertical, mismo ancho) */
+/* Acciones: columna estable (no se salen) */
 .actions{
   display:flex;
-  flex-direction: column;
+  flex-direction:column;
   gap: 8px;
-  align-items: flex-end;
+  align-items:stretch;
 }
 .actions .btn{
-  width: 160px;
-  justify-content:center;
+  width: 100%;
+  max-width: 100%;
+  white-space: nowrap;
 }
 
-/* --- Dropzone --- */
+/* Dropzone */
 .dropzone{
   border: 2px dashed rgba(2,132,199,.45);
   border-radius: var(--r-10);
@@ -541,13 +592,8 @@ img{ max-width:100%; height:auto; }
 /* =========================
    AUTH (LOGIN/REGISTER) — PRO
 ========================= */
+.layout--auth{ grid-template-columns: 1fr; }
 
-/* rompe el grid 280px cuando estás en /auth */
-.layout--auth{
-  grid-template-columns: 1fr;
-}
-
-/* saca el "card blanco" extra del content en auth */
 .content--auth{
   background: transparent;
   border: none;
@@ -556,9 +602,8 @@ img{ max-width:100%; height:auto; }
   min-height: auto;
 }
 
-/* centra panel */
 .auth-shell{
-  min-height: calc(100vh - 190px); /* topbar + footer + padding aprox */
+  min-height: calc(100vh - 190px);
   display:flex;
   align-items:center;
   justify-content:center;
@@ -600,14 +645,12 @@ img{ max-width:100%; height:auto; }
   margin-bottom: 16px;
 }
 
-/* botón full width */
 .auth-btn{
   width: 100%;
   height: 44px;
   border-radius: 10px;
 }
 
-/* links del auth */
 .auth-links{
   display:flex;
   justify-content:center;
@@ -619,13 +662,9 @@ img{ max-width:100%; height:auto; }
   padding: 10px 12px;
   border-radius: 10px;
 }
-.auth-link:hover{
-  background: rgba(2,132,199,.08);
-}
+.auth-link:hover{ background: rgba(2,132,199,.08); }
 
-/* =========================
-   Badges - estados
-========================= */
+/* Badges - estados */
 .badge--danger{
   background: rgba(220,38,38,.12);
   border-color: rgba(220,38,38,.35);
@@ -642,50 +681,19 @@ img{ max-width:100%; height:auto; }
   color:#15803d;
 }
 
-/* Confirm modal: look pro */
-#confirmModal .modal__panel{
-  max-width: 520px;
-}
-#confirmModal .modal__body{
-  padding: 14px;
-}
-#confirmModal .actions{
-  justify-content: flex-end;
-}
+/* Confirm modal */
+#confirmModal .modal__panel{ max-width: 520px; }
+#confirmModal .modal__body{ padding: 14px; }
+#confirmModal .actions{ justify-content: flex-end; }
 
-/* =========================
-   FIXES RESPONSIVE / OVERFLOW
-========================= */
-
-/* Esto evita que textos largos rompan grid/flex */
-.content, .card, .stat, .stat__value, .pill, .table td{
-  min-width: 0;
-}
-
-/* Dashboard: "Último Documento" con ellipsis */
-.stat__value.is-truncate{
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-/* En pantallas chicas, la tabla y acciones se adaptan */
+/* Responsive */
 @media (max-width: 980px){
   .layout{ grid-template-columns: 1fr; }
   .sidebar{ position: static; }
   .content{ padding: 16px; }
   .stats{ grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .pill{ max-width: 78vw; }
-
-  .file-pill{ max-width: 280px; }
-
-  /* Acciones a ancho completo en móvil */
-  .actions{
-    align-items: stretch;
-  }
-  .actions .btn{
-    width: 100%;
-  }
+  .table--docs th:nth-child(6), .table--docs td:nth-child(6){ width: 170px; }
 }
 
 @media (max-width: 520px){
@@ -695,9 +703,5 @@ img{ max-width:100%; height:auto; }
   .stats{ grid-template-columns: 1fr; }
   .toasts{ top: 74px; right: 10px; left: 10px; width: auto; }
   .form__grid{ grid-template-columns: 1fr; }
-
-  .auth-panel{
-    padding: 22px 18px;
-    border-radius: 14px;
-  }
+  .auth-panel{ padding: 22px 18px; border-radius: 14px; }
 }

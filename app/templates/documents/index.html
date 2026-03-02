@@ -73,88 +73,98 @@
 
   {% if docs %}
     <div class="card">
-      <table class="table">
-        <thead>
-          <tr>
-            <th>Documento</th>
-            <th>Categoría</th>
-            <th>Subido</th>
-            <th>Vence</th>
-            <th>Tamaño</th>
-            <th>Acciones</th>
-          </tr>
-        </thead>
-
-        <tbody>
-          {% for d in docs %}
+      <div class="table-wrap">
+        <table class="table table--docs">
+          <thead>
             <tr>
-              <td>
-                <span class="file-pill" title="{{ d.filename }}">📄 {{ d.filename }}</span>
-                <div class="help">Nombre interno: {{ d.name }}</div>
-              </td>
-
-              <td>
-                {% if d.category %}
-                  <span class="badge">🏷️ {{ d.category.name }}</span>
-                {% else %}
-                  <span class="badge">—</span>
-                {% endif %}
-              </td>
-
-              <td>{{ d.created_at.strftime("%d-%m-%Y %H:%M") }}</td>
-
-              <td>
-                {% if d.due_date %}
-                  {% set today = d.due_date.__class__.today() %}
-                  {% set diff = (d.due_date - today).days %}
-
-                  {% if diff < 0 %}
-                    <span class="badge badge--danger" title="Vencido hace {{ (diff * -1) }} día(s)">🔴 {{ d.due_date.strftime("%d-%m-%Y") }}</span>
-                  {% elif diff == 0 %}
-                    <span class="badge badge--warn" title="Vence hoy">🟠 {{ d.due_date.strftime("%d-%m-%Y") }}</span>
-                  {% elif diff <= 7 %}
-                    <span class="badge badge--warn" title="Faltan {{ diff }} día(s)">🟠 {{ d.due_date.strftime("%d-%m-%Y") }}</span>
-                  {% else %}
-                    <span class="badge badge--ok" title="Faltan {{ diff }} día(s)">🟢 {{ d.due_date.strftime("%d-%m-%Y") }}</span>
-                  {% endif %}
-                {% else %}
-                  <span class="badge" title="Sin fecha límite">—</span>
-                {% endif %}
-              </td>
-
-              <td>
-                {% set mb = (d.file_size / 1024 / 1024) %}
-                {{ "%.2f"|format(mb) }} MB
-              </td>
-
-              <td>
-                <div class="actions">
-                  <button
-                    class="btn btn--ghost btn--small"
-                    type="button"
-                    data-modal-open="{{ url_for('documents.preview', doc_id=d.id) }}"
-                    data-modal-title="{{ d.filename }}"
-                  >👁️ Vista previa</button>
-
-                  <a class="btn btn--ghost btn--small" href="{{ url_for('documents.download', doc_id=d.id) }}">⬇️ Descargar</a>
-
-                  {% if current_user.is_admin %}
-                    <form method="POST" action="{{ url_for('documents.delete', doc_id=d.id) }}" style="display:inline;">
-                      <button
-                        class="btn btn--danger btn--small"
-                        type="button"
-                        data-confirm="¿Eliminar este documento? Esta acción no se puede deshacer."
-                        data-confirm-title="Eliminar documento"
-                        data-confirm-ok="Eliminar"
-                      >🗑️ Eliminar</button>
-                    </form>
-                  {% endif %}
-                </div>
-              </td>
+              <th>Documento</th>
+              <th>Categoría</th>
+              <th>Subido</th>
+              <th>Vence</th>
+              <th>Tamaño</th>
+              <th>Acciones</th>
             </tr>
-          {% endfor %}
-        </tbody>
-      </table>
+          </thead>
+
+          <tbody>
+            {% for d in docs %}
+              {% set fn = (d.filename or '')|lower %}
+              {% set is_previewable = fn.endswith('.pdf') or fn.endswith('.png') or fn.endswith('.jpg') or fn.endswith('.jpeg') or fn.endswith('.webp') %}
+              <tr>
+                <td>
+                  <span class="file-pill" title="{{ d.filename }}">📄 {{ d.filename }}</span>
+                  <div class="help file-meta">Nombre interno: {{ d.name }}</div>
+                </td>
+
+                <td>
+                  {% if d.category %}
+                    <span class="badge">🏷️ {{ d.category.name }}</span>
+                  {% else %}
+                    <span class="badge">—</span>
+                  {% endif %}
+                </td>
+
+                <td>{{ d.created_at.strftime("%d-%m-%Y %H:%M") }}</td>
+
+                <td>
+                  {% if d.due_date %}
+                    {% set today = d.due_date.__class__.today() %}
+                    {% set diff = (d.due_date - today).days %}
+
+                    {% if diff < 0 %}
+                      <span class="badge badge--danger" title="Vencido hace {{ (diff * -1) }} día(s)">🔴 {{ d.due_date.strftime("%d-%m-%Y") }}</span>
+                    {% elif diff == 0 %}
+                      <span class="badge badge--warn" title="Vence hoy">🟠 {{ d.due_date.strftime("%d-%m-%Y") }}</span>
+                    {% elif diff <= 7 %}
+                      <span class="badge badge--warn" title="Faltan {{ diff }} día(s)">🟠 {{ d.due_date.strftime("%d-%m-%Y") }}</span>
+                    {% else %}
+                      <span class="badge badge--ok" title="Faltan {{ diff }} día(s)">🟢 {{ d.due_date.strftime("%d-%m-%Y") }}</span>
+                    {% endif %}
+                  {% else %}
+                    <span class="badge" title="Sin fecha límite">—</span>
+                  {% endif %}
+                </td>
+
+                <td>
+                  {% set mb = (d.file_size / 1024 / 1024) %}
+                  {{ "%.2f"|format(mb) }} MB
+                </td>
+
+                <td>
+                  <div class="actions">
+                    {% if is_previewable %}
+                      <button
+                        class="btn btn--ghost btn--small"
+                        type="button"
+                        data-modal-open="{{ url_for('documents.preview', doc_id=d.id) }}"
+                        data-modal-title="{{ d.filename }}"
+                      >👁️ Vista previa</button>
+                    {% else %}
+                      <button class="btn btn--ghost btn--small" type="button" disabled title="Vista previa solo PDF/imagenes">
+                        👁️ Vista previa
+                      </button>
+                    {% endif %}
+
+                    <a class="btn btn--ghost btn--small" href="{{ url_for('documents.download', doc_id=d.id) }}">⬇️ Descargar</a>
+
+                    {% if current_user.is_admin %}
+                      <form method="POST" action="{{ url_for('documents.delete', doc_id=d.id) }}">
+                        <button
+                          class="btn btn--danger btn--small"
+                          type="button"
+                          data-confirm="¿Eliminar este documento? Esta acción no se puede deshacer."
+                          data-confirm-title="Eliminar documento"
+                          data-confirm-ok="Eliminar"
+                        >🗑️ Eliminar</button>
+                      </form>
+                    {% endif %}
+                  </div>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
     </div>
 
     <!-- Modal preview -->
@@ -169,6 +179,7 @@
         </div>
       </div>
     </div>
+
   {% else %}
     <div class="card center">
       <div class="h2">No hay resultados</div>

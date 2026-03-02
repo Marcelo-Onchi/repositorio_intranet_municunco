@@ -42,7 +42,7 @@ def _parse_date_ddmmyyyy(raw: str) -> Optional[datetime]:
     if not raw:
         return None
 
-    # Explorer usa dd-mm-aaaa (y aceptamos yyyy-mm-dd por si viene de otro lado)
+    # Explorer usa dd-mm-aaaa (y aceptamos yyyy-mm-dd por compatibilidad)
     for fmt in ("%d-%m-%Y", "%Y-%m-%d"):
         try:
             return datetime.strptime(raw, fmt)
@@ -72,7 +72,7 @@ def _google_connected(user_id: int) -> bool:
 def _iso_local(dt_naive: datetime) -> str:
     """
     Genera ISO8601 con offset usando ZoneInfo (Python 3.9+).
-    Si algo falla, retorna iso sin tz (igual suele funcionar, pero mejor con tz).
+    Si algo falla, retorna iso sin tz.
     """
     tz_name = current_app.config.get("APP_TIMEZONE", "America/Santiago")
     try:
@@ -106,7 +106,7 @@ def _create_calendar_deadline_best_effort(title: str, due: date) -> bool:
         return bool(
             create_deadline_event(
                 user_id=current_user.id,
-                title=title[:120],
+                title=(title or "")[:120],
                 description=description,
                 start_iso=_iso_local(start_dt),
                 end_iso=_iso_local(end_dt),
@@ -114,6 +114,11 @@ def _create_calendar_deadline_best_effort(title: str, due: date) -> bool:
         )
     except Exception:
         return False
+
+
+def _is_previewable(filename: str) -> bool:
+    fn = (filename or "").lower()
+    return fn.endswith(".pdf") or fn.endswith(".png") or fn.endswith(".jpg") or fn.endswith(".jpeg") or fn.endswith(".webp")
 
 
 # =========================
@@ -129,11 +134,15 @@ def dashboard():
     used_mb = round((used_bytes / 1024 / 1024), 2)
 
     last_doc = Document.query.order_by(Document.created_at.desc()).first()
-    last_doc_name = last_doc.name if last_doc else "Ninguno"
+
+    # Mostramos filename (lo que el usuario entiende). Si no existe, cae a name.
+    if last_doc:
+        last_doc_name = last_doc.filename or last_doc.name or "Ninguno"
+    else:
+        last_doc_name = "Ninguno"
 
     gc_connected = _google_connected(current_user.id)
 
-    # Vencimientos próximos (DB): hoy -> 7 días
     today = date.today()
     until = today + timedelta(days=7)
 
@@ -212,7 +221,6 @@ def index():
 
     # Orden
     if sort == "due_asc":
-        # due_date NULL al final
         query = query.order_by(
             db.case((Document.due_date.is_(None), 1), else_=0),
             Document.due_date.asc(),
@@ -264,7 +272,7 @@ def upload_post():
     due_raw = request.form.get("due_date") or ""
     due = _parse_due_date(due_raw)
 
-    # Validación server-side: no fechas pasadas
+    # Server-side: no fechas pasadas
     if due and due < date.today():
         flash("La fecha límite no puede ser en el pasado.", "warning")
         return redirect(url_for("documents.upload"))
@@ -318,7 +326,7 @@ def upload_post():
         db.session.add(doc)
         saved += 1
 
-        # Crear evento (best-effort) por archivo si hay fecha
+        # Best-effort: evento por archivo si hay fecha y GC está conectado
         if due and gc_connected:
             ok = _create_calendar_deadline_best_effort(title=doc.filename, due=due)
             if ok:
@@ -348,21 +356,22 @@ def upload_post():
 @bp.get("/preview/<int:doc_id>")
 @login_required
 def preview(doc_id: int):
+    """
+    IMPORTANTE:
+    - Nunca hacer redirect aquí, porque el iframe termina cargando HTML del sistema.
+    - Solo permitimos inline para PDF e imágenes.
+    """
     doc = Document.query.get_or_404(doc_id)
 
     path = Path(doc.path)
     if not path.exists():
-        flash("Archivo no encontrado en disco.", "danger")
-        return redirect(url_for("documents.index"))
+        abort(404, description="Archivo no encontrado en disco.")
+
+    if not _is_previewable(doc.filename):
+        abort(415, description="Vista previa disponible solo para PDF e imágenes.")
 
     mime, _ = mimetypes.guess_type(doc.filename)
     mime = mime or "application/octet-stream"
-
-    is_inline = mime.startswith("image/") or mime == "application/pdf"
-    if not is_inline:
-        flash("Vista previa disponible solo para PDF e imágenes. Descarga para abrir.", "info")
-        return redirect(url_for("documents.index"))
-
     return send_file(path, mimetype=mime, as_attachment=False, download_name=doc.filename)
 
 
@@ -399,6 +408,7 @@ def delete(doc_id: int):
         if path.exists():
             path.unlink()
     except Exception:
+        # Best-effort: si no se puede borrar en disco, igual ya se eliminó en DB.
         pass
 
     flash("Documento eliminado.", "success")
