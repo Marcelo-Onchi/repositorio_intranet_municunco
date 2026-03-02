@@ -1,6 +1,7 @@
 /* =========================================
    PAGES.CSS — Dashboard / Admin / Docs / Upload
    Objetivo: tablas sin overflow en desktop + truncados reales
+   ✅ Incluye mejoras: badges más pro + acciones admin estables + details limpios
 ========================================= */
 
 /* ---------------------------------------------------------
@@ -219,6 +220,7 @@
   align-items: center;
   justify-content: center;
   line-height: 1.1;
+  border: 1px solid rgba(0,0,0,.08); /* ✅ borde más sobrio */
 }
 
 .table--admin .badge--ok{
@@ -232,33 +234,27 @@
   color:#b91c1c;
 }
 
-/* ====== ACCIONES ADMIN (FIX REAL) ======
-   Problema: .admin-details estaba pensado como “panel”
-   y en la tabla se veía como cajas raras con padding/fondo.
+/* ====== ACCIONES ADMIN — FIX DEFINITIVO ======
+   - 1 sola columna (estable)
+   - botones 1 línea (sin "Hacer\nadmin")
+   - details no se ven como "cards" cerrados
 */
 .admin-actions-cell{
   padding: 10px 12px;
 }
 
-/* Grilla de acciones */
+/* Contenedor de acciones: SIEMPRE 1 columna */
 .admin-actions-cell .admin-actionpanel{
-  display:grid;
-  grid-template-columns: 1fr;
-  gap: 8px;
-  align-items:start;
-}
-
-/* En pantallas grandes: 2 columnas */
-@media (min-width: 1180px){
-  .admin-actions-cell .admin-actionpanel{
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
+  display: grid !important;
+  grid-template-columns: 1fr !important;
+  gap: 8px !important;
+  align-items: start !important;
 }
 
 /* forms sin márgenes */
 .admin-actions-cell .admin-actionpanel form{ margin:0; }
 
-/* ✅ IMPORTANTÍSIMO: details en tabla NO deben parecer “card” */
+/* details en tabla: no deben parecer “panel” cerrado */
 .admin-actions-cell .admin-details{
   border: 0;
   background: transparent;
@@ -266,7 +262,7 @@
   border-radius: 0;
 }
 
-/* Summary como botón real (evita estilos nativos “raros”) */
+/* Summary como botón real */
 .admin-actions-cell .admin-details summary{
   list-style:none;
   cursor:pointer;
@@ -276,21 +272,23 @@
   justify-content:center;
   gap:8px;
 
-  width:100%;
-  min-width:0;
-  white-space:nowrap;
+  width:100% !important;
+  min-width:0 !important;
 
-  /* look compacto */
   padding: 8px 10px;
   min-height: 34px;
   border-radius: 10px;
 
-  /* reset nativo */
   border: 1px solid rgba(2,132,199,.22);
   background: #fff;
   color: var(--c-primary-3);
   font-weight: 900;
   font-size: 13px;
+
+  white-space: nowrap !important;   /* ✅ evita quiebre */
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  line-height: 1.1 !important;
 }
 .admin-actions-cell .admin-details summary::-webkit-details-marker{ display:none; }
 .admin-actions-cell .admin-details summary:hover{
@@ -298,11 +296,11 @@
   border-color: rgba(2,132,199,.38);
 }
 
-/* Botones normales dentro de acciones: compactos */
+/* Botones dentro de acciones: compactos + 1 línea */
 .admin-actions-cell .btn{
-  width:100%;
-  max-width:100%;
-  min-width:0;
+  width:100% !important;
+  max-width:100% !important;
+  min-width:0 !important;
 
   padding: 8px 10px;
   min-height: 34px;
@@ -316,6 +314,10 @@
   align-items:center;
   justify-content:center;
   gap:8px;
+
+  white-space: nowrap !important;   /* ✅ evita “Hacer\nadmin” */
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
 }
 
 /* Ghost más sobrio dentro de admin actions */
@@ -329,14 +331,15 @@
   border-color: rgba(2,132,199,.38);
 }
 
-/* Danger consistente */
+/* Danger consistente + micro “premium” */
 .admin-actions-cell .btn--danger{
   border: 1px solid rgba(220,38,38,.18);
+  box-shadow: 0 4px 10px rgba(220,38,38,.15); /* ✅ sutil */
 }
 
-/* Panel interno de details cuando está abierto: recién ahí mostramos “caja” */
+/* Panel interno de details cuando está abierto (ahí sí “caja”) */
 .admin-actions-cell .admin-details[open]{
-  grid-column: 1 / -1; /* ocupa ancho completo si estás en 2 columnas */
+  grid-column: 1 / -1 !important;
 }
 .admin-actions-cell .admin-details[open] > form{
   margin-top: 8px;
@@ -344,6 +347,13 @@
   background: rgba(2,132,199,.03);
   border-radius: 12px;
   padding: 10px;
+  width: 100% !important;
+  animation: fadeInAdmin .15s ease; /* ✅ micro UX */
+}
+
+@keyframes fadeInAdmin{
+  from { opacity:0; transform: translateY(-4px); }
+  to { opacity:1; transform: translateY(0); }
 }
 
 /* Categorías */
@@ -358,51 +368,9 @@
 @media (max-width: 980px){
   .stats{ grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .table--docs th:nth-child(6), .table--docs td:nth-child(6){ width: 200px; }
-
-  /* Admin: acciones en 1 columna sí o sí */
-  .admin-actions-cell .admin-actionpanel{ grid-template-columns: 1fr; }
 }
 
 @media (max-width: 520px){
   .stats{ grid-template-columns: 1fr; }
   .table-wrap{ overflow-x:auto; } /* móvil: scroll sano */
-}
-/* =========================================
-   ADMIN — FIX acciones (evitar texto partido / botones feos)
-   Pegar al FINAL de pages.css
-========================================= */
-
-/* 1) Acciones: SIEMPRE 1 columna (más pro y estable) */
-.admin-actions-cell .admin-actionpanel{
-  display: grid !important;
-  grid-template-columns: 1fr !important;
-  gap: 8px !important;
-  align-items: start !important;
-}
-
-/* 2) Botones: una sola línea + ancho completo */
-.admin-actions-cell .btn,
-.admin-actions-cell .admin-details summary{
-  width: 100% !important;
-  min-width: 0 !important;
-
-  white-space: nowrap !important;   /* evita “Hacer\nadmin” */
-  overflow: hidden !important;
-  text-overflow: ellipsis !important;
-
-  justify-content: center !important;
-  line-height: 1.1 !important;
-}
-
-/* 3) Botón peligro: mismo alto y ancho que los demás */
-.admin-actions-cell .btn--danger{
-  min-height: 34px !important;
-}
-
-/* 4) Details abiertos: panel interno sí ocupa ancho completo */
-.admin-actions-cell .admin-details[open]{
-  grid-column: 1 / -1 !important;
-}
-.admin-actions-cell .admin-details[open] > form{
-  width: 100% !important;
 }
