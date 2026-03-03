@@ -6,16 +6,7 @@ from pathlib import Path
 from typing import Optional
 from uuid import uuid4
 
-from flask import (
-    abort,
-    current_app,
-    flash,
-    redirect,
-    render_template,
-    request,
-    send_file,
-    url_for,
-)
+from flask import abort, current_app, flash, redirect, render_template, request, send_file, url_for
 from flask_login import current_user, login_required
 from werkzeug.utils import secure_filename
 
@@ -24,9 +15,9 @@ from app.models import Category, Document, GoogleToken
 from . import bp
 
 
-# =========================
+# =========================================================
 # Helpers
-# =========================
+# =========================================================
 def _allowed_file(filename: str) -> bool:
     allowed = current_app.config.get("ALLOWED_EXTENSIONS") or set()
     if not allowed:
@@ -41,8 +32,6 @@ def _parse_date_ddmmyyyy(raw: str) -> Optional[datetime]:
     raw = (raw or "").strip()
     if not raw:
         return None
-
-    # Explorer usa dd-mm-aaaa (y aceptamos yyyy-mm-dd por compatibilidad)
     for fmt in ("%d-%m-%Y", "%Y-%m-%d"):
         try:
             return datetime.strptime(raw, fmt)
@@ -63,25 +52,9 @@ def _parse_due_date(raw: str) -> Optional[date]:
 
 def _google_connected(user_id: int) -> bool:
     try:
-        token = GoogleToken.query.filter_by(user_id=user_id).first()
-        return bool(token)
+        return bool(GoogleToken.query.filter_by(user_id=user_id).first())
     except Exception:
         return False
-
-
-def _iso_local(dt_naive: datetime) -> str:
-    """
-    Genera ISO8601 con offset usando ZoneInfo (Python 3.9+).
-    Si algo falla, retorna iso sin tz.
-    """
-    tz_name = current_app.config.get("APP_TIMEZONE", "America/Santiago")
-    try:
-        from zoneinfo import ZoneInfo
-
-        aware = dt_naive.replace(tzinfo=ZoneInfo(tz_name))
-        return aware.isoformat()
-    except Exception:
-        return dt_naive.isoformat()
 
 
 def _create_calendar_deadline_best_effort(title: str, due: date) -> bool:
@@ -103,27 +76,35 @@ def _create_calendar_deadline_best_effort(title: str, due: date) -> bool:
     )
 
     try:
-        return bool(
-            create_deadline_event(
-                user_id=current_user.id,
-                title=(title or "")[:120],
-                description=description,
-                start_iso=_iso_local(start_dt),
-                end_iso=_iso_local(end_dt),
-            )
+        ok, err = create_deadline_event(
+            user_id=current_user.id,
+            title=(title or "")[:120],
+            description=description,
+            start_dt=start_dt,
+            end_dt=end_dt,
         )
-    except Exception:
+        if not ok and err:
+            try:
+                current_app.logger.warning("Calendar reminder failed: %s", err)
+            except Exception:
+                pass
+        return bool(ok)
+    except Exception as e:
+        try:
+            current_app.logger.warning("Calendar best-effort exception: %s", e)
+        except Exception:
+            pass
         return False
 
 
 def _is_previewable(filename: str) -> bool:
     fn = (filename or "").lower()
-    return fn.endswith(".pdf") or fn.endswith(".png") or fn.endswith(".jpg") or fn.endswith(".jpeg") or fn.endswith(".webp")
+    return fn.endswith((".pdf", ".png", ".jpg", ".jpeg", ".webp"))
 
 
-# =========================
-# Dashboard
-# =========================
+# =========================================================
+# Rutas
+# =========================================================
 @bp.get("/dashboard")
 @login_required
 def dashboard():
@@ -134,12 +115,7 @@ def dashboard():
     used_mb = round((used_bytes / 1024 / 1024), 2)
 
     last_doc = Document.query.order_by(Document.created_at.desc()).first()
-
-    # Mostramos filename (lo que el usuario entiende). Si no existe, cae a name.
-    if last_doc:
-        last_doc_name = last_doc.filename or last_doc.name or "Ninguno"
-    else:
-        last_doc_name = "Ninguno"
+    last_doc_name = (last_doc.filename or last_doc.name) if last_doc else "Ninguno"
 
     gc_connected = _google_connected(current_user.id)
 
@@ -166,16 +142,13 @@ def dashboard():
         total_docs=total_docs,
         total_cats=total_cats,
         used_mb=used_mb,
-        last_doc_name=last_doc_name,
+        last_doc_name=last_doc_name or "Ninguno",
         gc_connected=gc_connected,
         due_soon_docs=due_soon_docs,
         overdue_count=overdue_count,
     )
 
 
-# =========================
-# Listado / Explorer
-# =========================
 @bp.get("/")
 @login_required
 def index():
@@ -204,7 +177,6 @@ def index():
     if hasta_dt:
         query = query.filter(Document.created_at <= datetime.combine(hasta_dt.date(), time.max))
 
-    # Filtro vencimientos
     today = date.today()
     if due_status == "has_due":
         query = query.filter(Document.due_date.isnot(None))
@@ -219,7 +191,6 @@ def index():
             .filter(Document.due_date <= (today + timedelta(days=7)))
         )
 
-    # Orden
     if sort == "due_asc":
         query = query.order_by(
             db.case((Document.due_date.is_(None), 1), else_=0),
@@ -251,9 +222,6 @@ def index():
     )
 
 
-# =========================
-# Subida
-# =========================
 @bp.get("/upload")
 @login_required
 def upload():
@@ -272,7 +240,6 @@ def upload_post():
     due_raw = request.form.get("due_date") or ""
     due = _parse_due_date(due_raw)
 
-    # Server-side: no fechas pasadas
     if due and due < date.today():
         flash("La fecha límite no puede ser en el pasado.", "warning")
         return redirect(url_for("documents.upload"))
@@ -296,18 +263,11 @@ def upload_post():
             continue
 
         original = secure_filename(f.filename)
-        if not original:
+        if not original or not _allowed_file(original):
             rejected += 1
             continue
 
-        if not _allowed_file(original):
-            rejected += 1
-            continue
-
-        ext = ""
-        if "." in original:
-            ext = "." + original.rsplit(".", 1)[1].lower()
-
+        ext = "." + original.rsplit(".", 1)[1].lower() if "." in original else ""
         storage_name = f"{uuid4().hex}{ext}"
         disk_path = upload_path / storage_name
 
@@ -326,7 +286,7 @@ def upload_post():
         db.session.add(doc)
         saved += 1
 
-        # Best-effort: evento por archivo si hay fecha y GC está conectado
+        # ✅ Evento por cada doc (si se definió due_date y Google está conectado)
         if due and gc_connected:
             ok = _create_calendar_deadline_best_effort(title=doc.filename, due=due)
             if ok:
@@ -350,19 +310,10 @@ def upload_post():
     return redirect(url_for("documents.index"))
 
 
-# =========================
-# Preview / Download
-# =========================
 @bp.get("/preview/<int:doc_id>")
 @login_required
 def preview(doc_id: int):
-    """
-    IMPORTANTE:
-    - Nunca hacer redirect aquí, porque el iframe termina cargando HTML del sistema.
-    - Solo permitimos inline para PDF e imágenes.
-    """
     doc = Document.query.get_or_404(doc_id)
-
     path = Path(doc.path)
     if not path.exists():
         abort(404, description="Archivo no encontrado en disco.")
@@ -371,8 +322,7 @@ def preview(doc_id: int):
         abort(415, description="Vista previa disponible solo para PDF e imágenes.")
 
     mime, _ = mimetypes.guess_type(doc.filename)
-    mime = mime or "application/octet-stream"
-    return send_file(path, mimetype=mime, as_attachment=False, download_name=doc.filename)
+    return send_file(path, mimetype=mime or "application/octet-stream", as_attachment=False, download_name=doc.filename)
 
 
 @bp.get("/download/<int:doc_id>")
@@ -385,13 +335,9 @@ def download(doc_id: int):
         return redirect(url_for("documents.index"))
 
     mime, _ = mimetypes.guess_type(doc.filename)
-    mime = mime or "application/octet-stream"
-    return send_file(path, mimetype=mime, as_attachment=True, download_name=doc.filename)
+    return send_file(path, mimetype=mime or "application/octet-stream", as_attachment=True, download_name=doc.filename)
 
 
-# =========================
-# Delete
-# =========================
 @bp.post("/delete/<int:doc_id>")
 @login_required
 def delete(doc_id: int):
@@ -408,7 +354,6 @@ def delete(doc_id: int):
         if path.exists():
             path.unlink()
     except Exception:
-        # Best-effort: si no se puede borrar en disco, igual ya se eliminó en DB.
         pass
 
     flash("Documento eliminado.", "success")

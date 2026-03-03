@@ -83,7 +83,6 @@ class Document(db.Model):
 
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
 
-    # ✅ Fecha límite (opcional)
     due_date = db.Column(db.Date, nullable=True, index=True)
 
     category_id = db.Column(db.Integer, db.ForeignKey("category.id"), nullable=True)
@@ -102,7 +101,13 @@ class GoogleToken(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
 
-    user_id = db.Column(db.Integer, db.ForeignKey("user.id"), unique=True, nullable=False)
+    user_id = db.Column(
+        db.Integer,
+        db.ForeignKey("user.id"),
+        unique=True,
+        index=True,  # ✅ recomendado
+        nullable=False,
+    )
     user = db.relationship("User", back_populates="google_token", lazy="joined")
 
     access_token = db.Column(db.Text, nullable=False)

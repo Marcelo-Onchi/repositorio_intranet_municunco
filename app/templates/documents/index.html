@@ -92,7 +92,10 @@
               {% set is_previewable = fn.endswith('.pdf') or fn.endswith('.png') or fn.endswith('.jpg') or fn.endswith('.jpeg') or fn.endswith('.webp') %}
               <tr>
                 <td>
-                  <span class="file-pill" title="{{ d.filename }}">📄 {{ d.filename }}</span>
+                  <span class="file-pill" title="{{ d.filename }}">
+                    <span class="file-pill__icon" aria-hidden="true">📄</span>
+                    <span class="file-pill__text">{{ d.filename }}</span>
+                  </span>
                   <div class="help file-meta">Nombre interno: {{ d.name }}</div>
                 </td>
 
@@ -107,22 +110,24 @@
                 <td>{{ d.created_at.strftime("%d-%m-%Y %H:%M") }}</td>
 
                 <td>
-                  {% if d.due_date %}
-                    {% set today = d.due_date.__class__.today() %}
-                    {% set diff = (d.due_date - today).days %}
+                  <div class="due-wrap">
+                    {% if d.due_date %}
+                      {% set today = d.due_date.__class__.today() %}
+                      {% set diff = (d.due_date - today).days %}
 
-                    {% if diff < 0 %}
-                      <span class="badge badge--danger" title="Vencido hace {{ (diff * -1) }} día(s)">🔴 {{ d.due_date.strftime("%d-%m-%Y") }}</span>
-                    {% elif diff == 0 %}
-                      <span class="badge badge--warn" title="Vence hoy">🟠 {{ d.due_date.strftime("%d-%m-%Y") }}</span>
-                    {% elif diff <= 7 %}
-                      <span class="badge badge--warn" title="Faltan {{ diff }} día(s)">🟠 {{ d.due_date.strftime("%d-%m-%Y") }}</span>
+                      {% if diff < 0 %}
+                        <span class="badge badge--danger" title="Vencido hace {{ (diff * -1) }} día(s)">🔴 {{ d.due_date.strftime("%d-%m-%Y") }}</span>
+                      {% elif diff == 0 %}
+                        <span class="badge badge--warn" title="Vence hoy">🟠 {{ d.due_date.strftime("%d-%m-%Y") }}</span>
+                      {% elif diff <= 7 %}
+                        <span class="badge badge--warn" title="Faltan {{ diff }} día(s)">🟠 {{ d.due_date.strftime("%d-%m-%Y") }}</span>
+                      {% else %}
+                        <span class="badge badge--ok" title="Faltan {{ diff }} día(s)">🟢 {{ d.due_date.strftime("%d-%m-%Y") }}</span>
+                      {% endif %}
                     {% else %}
-                      <span class="badge badge--ok" title="Faltan {{ diff }} día(s)">🟢 {{ d.due_date.strftime("%d-%m-%Y") }}</span>
+                      <span class="badge" title="Sin fecha límite">—</span>
                     {% endif %}
-                  {% else %}
-                    <span class="badge" title="Sin fecha límite">—</span>
-                  {% endif %}
+                  </div>
                 </td>
 
                 <td>

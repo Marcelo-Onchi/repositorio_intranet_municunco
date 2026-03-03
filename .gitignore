@@ -71,3 +71,6 @@ htmlcov/
 # =========================
 *.log
 logs/
+
+instance/google_oauth_client.json
+instance/*.json
