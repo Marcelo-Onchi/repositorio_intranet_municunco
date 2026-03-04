@@ -16,9 +16,6 @@ def main() -> None:
     admin_email = (os.getenv("ADMIN_EMAIL") or "").strip().lower()
     admin_password = (os.getenv("ADMIN_PASSWORD") or "").strip()
 
-    if not admin_username:
-        admin_username = "admin"
-
     if not admin_email or not admin_password:
         print("Falta ADMIN_EMAIL o ADMIN_PASSWORD en .env")
         return
@@ -30,7 +27,6 @@ def main() -> None:
 
         admin = User.query.filter_by(username=admin_username).first()
         if not admin:
-            # fallback por si quedó creado antes sin username correcto
             admin = User.query.filter_by(email=admin_email).first()
 
         if not admin:

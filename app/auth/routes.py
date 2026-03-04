@@ -38,11 +38,9 @@ def _safe_next_url(next_url: str | None) -> str | None:
     next_url = next_url.strip()
     parsed = urlparse(next_url)
 
-    # externo => se rechaza
     if parsed.scheme or parsed.netloc:
         return None
 
-    # solo paths internos
     if not next_url.startswith("/"):
         return None
 
@@ -58,14 +56,27 @@ def login():
 
 @bp.post("/login")
 def login_post():
-    username = _normalize_username(request.form.get("username", ""))
+    raw_user = (request.form.get("username") or "").strip()
     password = request.form.get("password") or ""
 
-    if not username or "@" in username:
-        flash("Usuario inválido. Ingresa tu usuario (sin @).", "error")
+    if not raw_user:
+        flash("Debes ingresar tu usuario o correo.", "error")
         return redirect(url_for("auth.login"))
 
-    user = User.query.filter_by(username=username).first()
+    # Permitir login por email o username
+    if "@" in raw_user:
+        email = _normalize_email(raw_user)
+        if not _is_valid_email(email):
+            flash("Correo inválido.", "error")
+            return redirect(url_for("auth.login"))
+        user = User.query.filter_by(email=email).first()
+    else:
+        username = _normalize_username(raw_user)
+        if not _USERNAME_RE.match(username):
+            flash("Usuario inválido. Usa 3–32 caracteres: letras/números/punto/guión/guión bajo.", "error")
+            return redirect(url_for("auth.login"))
+        user = User.query.filter_by(username=username).first()
+
     if not user or not user.is_active or not user.check_password(password):
         flash("Credenciales inválidas.", "error")
         return redirect(url_for("auth.login"))

@@ -19,8 +19,9 @@ class Config:
     # ==========================================================
     # Base de Datos
     # ==========================================================
-    DATABASE_URL = (os.getenv("DATABASE_URL") or "sqlite:///local.db").strip()
-    SQLALCHEMY_DATABASE_URI = DATABASE_URL
+    # Si DATABASE_URL viene vacío => sqlite:///local.db (create_app lo fijará a instance/local.db)
+    DATABASE_URL = (os.getenv("DATABASE_URL") or "").strip()
+    SQLALCHEMY_DATABASE_URI = DATABASE_URL or "sqlite:///local.db"
     SQLALCHEMY_TRACK_MODIFICATIONS = False
 
     SQLALCHEMY_ENGINE_OPTIONS = {"pool_pre_ping": True}
@@ -29,7 +30,7 @@ class Config:
     # Uploads
     # ==========================================================
     UPLOAD_DIR = os.getenv("UPLOAD_DIR", "uploads").strip()
-    UPLOAD_PATH = UPLOAD_DIR
+    UPLOAD_PATH = UPLOAD_DIR  # string/relativo para que __init__ lo resuelva
 
     MAX_CONTENT_LENGTH = int(os.getenv("MAX_CONTENT_LENGTH", str(20 * 1024 * 1024)))
 
@@ -40,6 +41,7 @@ class Config:
     # ==========================================================
     # Admin inicial (dev)
     # ==========================================================
+    ADMIN_USERNAME = (os.getenv("ADMIN_USERNAME") or "admin").strip().lower()
     ADMIN_EMAIL = (os.getenv("ADMIN_EMAIL") or "").strip().lower()
     ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "")
 
