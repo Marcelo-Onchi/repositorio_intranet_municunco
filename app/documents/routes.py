@@ -1,15 +1,18 @@
 from __future__ import annotations
 
 import mimetypes
+import os
 import shutil
 import subprocess
 import tempfile
+import time as time_mod
 from datetime import date, datetime, time, timedelta
 from pathlib import Path
 from typing import Optional
 from uuid import uuid4
 
 from docx import Document as DocxDocument
+from docx.shared import Pt
 from flask import abort, current_app, flash, redirect, render_template, request, send_file, url_for
 from flask_login import current_user, login_required
 from werkzeug.utils import secure_filename
@@ -121,87 +124,6 @@ def _ddmmyyyy_to_slash(raw_dd_mm_yyyy: str) -> str:
     return raw
 
 
-def _docx_replace_text(doc: DocxDocument, mapping: dict[str, str]) -> None:
-    """
-    Reemplazo simple de strings en párrafos y tablas.
-    OJO: paragraph.text puede “aplanar” formato dentro del párrafo.
-    Para oficios típicos funciona perfecto si los tags están completos (sin partirse).
-    """
-    for p in doc.paragraphs:
-        t = p.text or ""
-        new_t = t
-        for k, v in mapping.items():
-            if k in new_t:
-                new_t = new_t.replace(k, v)
-        if new_t != t:
-            p.text = new_t
-
-    for table in doc.tables:
-        for row in table.rows:
-            for cell in row.cells:
-                for p in cell.paragraphs:
-                    t = p.text or ""
-                    new_t = t
-                    for k, v in mapping.items():
-                        if k in new_t:
-                            new_t = new_t.replace(k, v)
-                    if new_t != t:
-                        p.text = new_t
-
-
-def _convert_docx_to_pdf(docx_path: Path, out_dir: Path) -> Path:
-    """
-    Convierte DOCX -> PDF.
-    Prioridad:
-      1) LibreOffice (soffice) si existe en PATH (Ubuntu recomendado)
-      2) docx2pdf (Windows + Word instalado)
-    """
-    out_dir.mkdir(parents=True, exist_ok=True)
-
-    lo_bin = (current_app.config.get("LIBREOFFICE_BIN") or "soffice").strip()
-    lo_real = shutil.which(lo_bin) or shutil.which("soffice")
-
-    if lo_real:
-        cmd = [
-            lo_real,
-            "--headless",
-            "--nologo",
-            "--nofirststartwizard",
-            "--convert-to",
-            "pdf",
-            "--outdir",
-            str(out_dir),
-            str(docx_path),
-        ]
-        proc = subprocess.run(cmd, capture_output=True, text=True)
-        if proc.returncode != 0:
-            raise RuntimeError(f"LibreOffice falló al convertir a PDF: {proc.stderr or proc.stdout}")
-
-        pdf_path = out_dir / f"{docx_path.stem}.pdf"
-        if not pdf_path.exists():
-            raise RuntimeError("No se generó el PDF (salida inesperada de LibreOffice).")
-        return pdf_path
-
-    # Fallback docx2pdf (requiere Word en Windows)
-    try:
-        from docx2pdf import convert  # type: ignore
-    except Exception:
-        raise RuntimeError(
-            "No hay convertidor disponible. En servidor Ubuntu instala LibreOffice. "
-            "En Windows puedes usar docx2pdf + Word."
-        )
-
-    pdf_path = out_dir / f"{docx_path.stem}.pdf"
-    try:
-        convert(str(docx_path), str(pdf_path))
-    except Exception as e:
-        raise RuntimeError(f"docx2pdf falló (¿Word instalado?): {e}")
-
-    if not pdf_path.exists():
-        raise RuntimeError("No se generó el PDF con docx2pdf.")
-    return pdf_path
-
-
 def _safe_slug(value: str) -> str:
     raw = (value or "").strip()
     out = []
@@ -237,7 +159,202 @@ def _oficio_template_path() -> Path:
     """
     Ruta final al DOCX oficial.
     """
-    return _templates_dir() / (current_app.config.get("OFICIO_TEMPLATE_FILENAME") or "oficio_respuesta_template_v1.docx")
+    return _templates_dir() / (
+        current_app.config.get("OFICIO_TEMPLATE_FILENAME") or "oficio_respuesta_template_v1.docx"
+    )
+
+
+def _ensure_default_font(doc: DocxDocument, font_name: str = "Arial", font_size_pt: int = 11) -> None:
+    """
+    Asegura que el estilo Normal del documento sea Arial 11.
+    """
+    try:
+        style = doc.styles["Normal"]
+        style.font.name = font_name
+        style.font.size = Pt(font_size_pt)
+    except Exception:
+        pass
+
+
+def _replace_in_paragraph_runs(paragraph, mapping: dict[str, str]) -> None:
+    """
+    Reemplaza placeholders dentro de runs SIN reasignar paragraph.text.
+    Preserva formato de la plantilla.
+    """
+    if not paragraph.runs:
+        return
+
+    full_text = "".join(run.text for run in paragraph.runs)
+    if not full_text:
+        return
+
+    changed = False
+    for k, v in mapping.items():
+        if k in full_text:
+            full_text = full_text.replace(k, v)
+            changed = True
+
+    if not changed:
+        return
+
+    paragraph.runs[0].text = full_text
+    for r in paragraph.runs[1:]:
+        r.text = ""
+
+
+def _docx_replace_text(doc: DocxDocument, mapping: dict[str, str]) -> None:
+    """
+    Reemplazo de placeholders manteniendo formato.
+    """
+    for p in doc.paragraphs:
+        _replace_in_paragraph_runs(p, mapping)
+
+    for table in doc.tables:
+        for row in table.rows:
+            for cell in row.cells:
+                for p in cell.paragraphs:
+                    _replace_in_paragraph_runs(p, mapping)
+
+
+def _convert_docx_to_pdf(docx_path: Path, out_dir: Path) -> Path:
+    """
+    Convierte DOCX -> PDF.
+    Prioridad:
+      1) LibreOffice (Ubuntu recomendado)
+      2) docx2pdf (Windows + Word instalado)
+
+    Windows:
+    - Inicializa COM (CoInitialize) para docx2pdf
+    - Espera a que el PDF quede liberado (evita WinError 32)
+    """
+    out_dir.mkdir(parents=True, exist_ok=True)
+
+    # 1) LibreOffice
+    lo_bin = (current_app.config.get("LIBREOFFICE_BIN") or "soffice").strip()
+    lo_real = shutil.which(lo_bin) or shutil.which("soffice")
+    if lo_real:
+        cmd = [
+            lo_real,
+            "--headless",
+            "--nologo",
+            "--nofirststartwizard",
+            "--convert-to",
+            "pdf",
+            "--outdir",
+            str(out_dir),
+            str(docx_path),
+        ]
+        proc = subprocess.run(cmd, capture_output=True, text=True)
+        if proc.returncode != 0:
+            raise RuntimeError(f"LibreOffice falló al convertir a PDF: {proc.stderr or proc.stdout}")
+
+        pdf_path = out_dir / f"{docx_path.stem}.pdf"
+        if not pdf_path.exists():
+            raise RuntimeError("No se generó el PDF (salida inesperada de LibreOffice).")
+        return pdf_path
+
+    # 2) docx2pdf + Word
+    try:
+        from docx2pdf import convert  # type: ignore
+    except Exception:
+        raise RuntimeError(
+            "No hay convertidor disponible. En servidor Ubuntu instala LibreOffice. "
+            "En Windows instala docx2pdf + Microsoft Word."
+        )
+
+    pdf_path = out_dir / f"{docx_path.stem}.pdf"
+
+    # COM init (soluciona -2147221008 CoInitialize)
+    try:
+        import pythoncom  # type: ignore
+
+        pythoncom.CoInitialize()
+        coinit = True
+    except Exception:
+        coinit = False
+
+    try:
+        convert(str(docx_path), str(pdf_path))
+    except Exception as e:
+        raise RuntimeError(f"docx2pdf falló (¿Word instalado?): {e}")
+    finally:
+        if coinit:
+            try:
+                import pythoncom  # type: ignore
+
+                pythoncom.CoUninitialize()
+            except Exception:
+                pass
+
+    # Espera a que Word suelte el archivo
+    for _ in range(30):
+        if pdf_path.exists():
+            try:
+                with open(pdf_path, "rb"):
+                    pass
+                return pdf_path
+            except OSError:
+                time_mod.sleep(0.15)
+
+    if not pdf_path.exists():
+        raise RuntimeError("No se generó el PDF con docx2pdf.")
+
+    raise RuntimeError("El PDF fue generado pero quedó bloqueado por Word. Reintenta en unos segundos.")
+
+
+def _send_pdf_from_temp(pdf_path: Path, download_name: str):
+    """
+    Solución WinError 32:
+    - Copia el PDF a un temp persistente (delete=False)
+    - Envía ese archivo
+    - Lo elimina al cerrar la respuesta
+    """
+    # Copiamos a un archivo temporal persistente
+    tmp = tempfile.NamedTemporaryFile(prefix="municunco_dl_", suffix=".pdf", delete=False)
+    tmp_path = Path(tmp.name)
+    tmp.close()
+
+    # Copia con reintentos por si el original aún está soltándose
+    last_err: Exception | None = None
+    for _ in range(20):
+        try:
+            shutil.copyfile(pdf_path, tmp_path)
+            last_err = None
+            break
+        except Exception as e:
+            last_err = e
+            time_mod.sleep(0.15)
+
+    if last_err is not None:
+        try:
+            if tmp_path.exists():
+                tmp_path.unlink()
+        except Exception:
+            pass
+        raise last_err
+
+    resp = send_file(
+        tmp_path,
+        mimetype="application/pdf",
+        as_attachment=True,
+        download_name=download_name,
+    )
+
+    @resp.call_on_close
+    def _cleanup():
+        try:
+            tmp_path.unlink(missing_ok=True)  # py3.8+ ignora si no existe
+        except TypeError:
+            # compat por si missing_ok no existe
+            try:
+                if tmp_path.exists():
+                    tmp_path.unlink()
+            except Exception:
+                pass
+        except Exception:
+            pass
+
+    return resp
 
 
 # =========================================================
@@ -498,123 +615,6 @@ def delete(doc_id: int):
 
 
 # =========================================================
-# Completar DOCX subido (desde Explorar) -> PDF
-# =========================================================
-@bp.get("/fill/<int:doc_id>")
-@login_required
-def fill(doc_id: int):
-    doc = Document.query.get_or_404(doc_id)
-
-    if not _is_docx(doc.filename):
-        flash("Solo puedes completar plantillas .DOCX.", "warning")
-        return redirect(url_for("documents.index"))
-
-    form = FillOficioForm(
-        numero_solicitud="MU071T0001762",
-        fecha_solicitud="20-01-2026",
-        tenor_literal=(
-            "Estimado/a solicito respetuosamente se me otorgue acceso a la siguiente información vinculada "
-            "al proceso de selección para el cargo de Trabajadora Social del Programa de Salud Mental de Los Laureles, "
-            "en el cual participé como postulante:…"
-        ),
-        respuesta="Se adjunta lo solicitado, exceptuando el informe de evaluación psicológica, ya que no corroboró identidad.",
-        guardar_pdf=True,
-    )
-
-    return render_template("documents/fill.html", doc=doc, form=form)
-
-
-@bp.post("/fill/<int:doc_id>")
-@login_required
-def fill_post(doc_id: int):
-    src_doc = Document.query.get_or_404(doc_id)
-
-    if not _is_docx(src_doc.filename):
-        flash("Solo puedes completar plantillas .DOCX.", "warning")
-        return redirect(url_for("documents.index"))
-
-    form = FillOficioForm()
-    if not form.validate_on_submit():
-        return render_template("documents/fill.html", doc=src_doc, form=form), 400
-
-    numero = (form.numero_solicitud.data or "").strip()
-    fecha_doc = _ddmmyyyy_to_slash(form.fecha_solicitud.data or "")
-    tenor = (form.tenor_literal.data or "").strip()
-    resp = (form.respuesta.data or "").strip()
-    guardar_pdf = bool(form.guardar_pdf.data)
-
-    src_path = Path(src_doc.path)
-    if not src_path.exists():
-        flash("Archivo no encontrado en disco.", "danger")
-        return redirect(url_for("documents.index"))
-
-    mapping = {
-        "{{NUM_SOLICITUD}}": numero,
-        "{{FECHA_SOLICITUD}}": fecha_doc,
-        "{{TENOR_LITERAL}}": tenor,
-        "{{RESPUESTA}}": resp,
-    }
-
-    safe_num = _safe_slug(numero)
-
-    try:
-        with tempfile.TemporaryDirectory(prefix="municunco_fill_") as tmp:
-            tmp_dir = Path(tmp)
-
-            d = DocxDocument(str(src_path))
-            _docx_replace_text(d, mapping)
-
-            out_docx = tmp_dir / f"oficio_{safe_num}.docx"
-            d.save(str(out_docx))
-
-            tmp_pdf = _convert_docx_to_pdf(out_docx, tmp_dir)
-
-            if guardar_pdf:
-                gen_dir = _generated_dir()
-                final_name = f"Oficio_{safe_num}_{uuid4().hex[:8]}.pdf"
-                final_path = gen_dir / final_name
-                shutil.copyfile(tmp_pdf, final_path)
-
-                size = final_path.stat().st_size if final_path.exists() else 0
-
-                new_doc = Document(
-                    name=f"Oficio_{safe_num}"[:160],
-                    filename=final_name[:260],
-                    path=str(final_path),
-                    file_size=int(size),
-                    category_id=src_doc.category_id,
-                    uploaded_by_id=current_user.id,
-                    due_date=None,
-                )
-                db.session.add(new_doc)
-                db.session.commit()
-
-                flash("✅ PDF generado y guardado en el repositorio.", "success")
-
-                return send_file(
-                    final_path,
-                    mimetype="application/pdf",
-                    as_attachment=True,
-                    download_name=final_name,
-                )
-
-            return send_file(
-                tmp_pdf,
-                mimetype="application/pdf",
-                as_attachment=True,
-                download_name=f"Oficio_{safe_num}.pdf",
-            )
-
-    except Exception as e:
-        try:
-            current_app.logger.exception("Fill template failed: %s", e)
-        except Exception:
-            pass
-        flash(f"No se pudo generar el PDF: {e}", "danger")
-        return render_template("documents/fill.html", doc=src_doc, form=form), 500
-
-
-# =========================================================
 # Oficio oficial (plantilla fija en uploads/templates) -> PDF
 # URL: /documents/oficio
 # =========================================================
@@ -629,12 +629,8 @@ def oficio():
     form = FillOficioForm(
         numero_solicitud="MU071T0001762",
         fecha_solicitud="20-01-2026",
-        tenor_literal=(
-            "Estimado/a solicito respetuosamente se me otorgue acceso a la siguiente información vinculada "
-            "al proceso de selección para el cargo de Trabajadora Social del Programa de Salud Mental de Los Laureles, "
-            "en el cual participé como postulante:…"
-        ),
-        respuesta="Se adjunta lo solicitado, exceptuando el informe de evaluación psicológica, ya que no corroboró identidad.",
+        tenor_literal="texto de prueba",
+        respuesta="respuesta de prueba",
         guardar_pdf=True,
     )
     return render_template("documents/oficio.html", form=form)
@@ -672,6 +668,7 @@ def oficio_post():
             tmp_dir = Path(tmp)
 
             d = DocxDocument(str(tpl_path))
+            _ensure_default_font(d, "Arial", 11)
             _docx_replace_text(d, mapping)
 
             out_docx = tmp_dir / f"oficio_{safe_num}.docx"
@@ -686,7 +683,6 @@ def oficio_post():
                 shutil.copyfile(tmp_pdf, final_path)
 
                 size = final_path.stat().st_size if final_path.exists() else 0
-
                 new_doc = Document(
                     name=f"Oficio_{safe_num}"[:160],
                     filename=final_name[:260],
@@ -708,10 +704,9 @@ def oficio_post():
                     download_name=final_name,
                 )
 
-            return send_file(
+            # ✅ FIX: cuando NO se guarda, NO servimos tmp_pdf directo (WinError 32).
+            return _send_pdf_from_temp(
                 tmp_pdf,
-                mimetype="application/pdf",
-                as_attachment=True,
                 download_name=f"Oficio_{safe_num}.pdf",
             )
 
