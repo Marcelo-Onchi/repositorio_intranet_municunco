@@ -18,14 +18,23 @@ def create_app() -> Flask:
     app.config.from_object(Config)
 
     # ------------------------------------------------------
+    # SQLite estable en instance/ (evita DBs "fantasma")
+    # Si la URI es sqlite:///local.db (relativa), la llevamos a instance/local.db
+    # ------------------------------------------------------
+    uri = (app.config.get("SQLALCHEMY_DATABASE_URI") or "").strip()
+    if uri.startswith("sqlite:///") and not uri.startswith("sqlite:////"):
+        db_filename = uri.replace("sqlite:///", "", 1).strip() or "local.db"
+        db_path = Path(app.instance_path) / db_filename
+        db_path.parent.mkdir(parents=True, exist_ok=True)
+        app.config["SQLALCHEMY_DATABASE_URI"] = f"sqlite:///{db_path.as_posix()}"
+
+    # ------------------------------------------------------
     # Upload path (on-premise friendly)
-    # - Si viene relativo, lo guardamos en instance/ para no ensuciar el repo
     # ------------------------------------------------------
     upload_cfg = app.config.get("UPLOAD_PATH", "uploads")
     upload_path = Path(upload_cfg)
 
     if not upload_path.is_absolute():
-        # instance_path es un folder real por ambiente (server/dev)
         upload_path = Path(app.instance_path) / upload_path
 
     upload_path.mkdir(parents=True, exist_ok=True)
@@ -43,7 +52,13 @@ def create_app() -> Flask:
     login_manager.login_message_category = "warning"
 
     # ------------------------------------------------------
-    # Blueprints (asegurar orden claro)
+    # CLI (init-db / db-info)
+    # ------------------------------------------------------
+    from .cli import register_cli
+    register_cli(app)
+
+    # ------------------------------------------------------
+    # Blueprints
     # ------------------------------------------------------
     from .auth import bp as auth_bp
     from .documents import bp as documents_bp
@@ -59,7 +74,7 @@ def create_app() -> Flask:
     # Seed admin (NO debe botar la app)
     # ------------------------------------------------------
     with app.app_context():
-        _ensure_admin_user_safe(app)
+        _ensure_admin_user_safe()
 
     @app.get("/")
     def index():
@@ -70,7 +85,7 @@ def create_app() -> Flask:
     return app
 
 
-def _ensure_admin_user_safe(app: Flask) -> None:
+def _ensure_admin_user_safe() -> None:
     """
     Garantiza un usuario admin para dev / primera puesta en marcha.
 
@@ -82,8 +97,9 @@ def _ensure_admin_user_safe(app: Flask) -> None:
         from sqlalchemy import inspect
         from sqlalchemy.exc import SQLAlchemyError
 
-        from .models import User  # import local para evitar ciclos
+        from .models import User
 
+        # Si aún no existen tablas, salimos (no rompemos arranque)
         try:
             inspector = inspect(db.engine)
             if "user" not in inspector.get_table_names():
@@ -95,9 +111,6 @@ def _ensure_admin_user_safe(app: Flask) -> None:
         admin_password = os.getenv("ADMIN_PASSWORD") or ""
         if not admin_email or not admin_password:
             return
-
-        app.config["ADMIN_EMAIL"] = admin_email
-        app.config["ADMIN_PASSWORD"] = admin_password
 
         admin_username = "admin"
 
