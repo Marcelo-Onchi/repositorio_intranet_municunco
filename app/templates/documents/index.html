@@ -63,6 +63,7 @@
       <div class="toolbar__right">
         <button class="btn btn--ghost" type="submit">Aplicar</button>
         <a class="btn" href="{{ url_for('documents.upload') }}">Subir</a>
+        <a class="btn btn--ghost" href="{{ url_for('documents.oficio') }}">🧩 Generar oficio</a>
       </div>
     </form>
 
@@ -90,6 +91,7 @@
             {% for d in docs %}
               {% set fn = (d.filename or '')|lower %}
               {% set is_previewable = fn.endswith('.pdf') or fn.endswith('.png') or fn.endswith('.jpg') or fn.endswith('.jpeg') or fn.endswith('.webp') %}
+              {% set is_docx = fn.endswith('.docx') %}
               <tr>
                 <td class="td-doc" data-label="Documento">
                   <span class="file-pill" title="{{ d.filename }}">
@@ -147,6 +149,14 @@
 
                 <td class="td-actions" data-label="Acciones">
                   <div class="actions">
+                    {% if is_docx %}
+                      <a class="btn btn--ghost btn--small" href="{{ url_for('documents.fill', doc_id=d.id) }}">🧩 Completar</a>
+                    {% else %}
+                      <button class="btn btn--ghost btn--small" type="button" disabled title="Disponible solo para DOCX">
+                        🧩 Completar
+                      </button>
+                    {% endif %}
+
                     {% if is_previewable %}
                       <button
                         class="btn btn--ghost btn--small"

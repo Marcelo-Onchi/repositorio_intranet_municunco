@@ -19,18 +19,16 @@ class Config:
     # ==========================================================
     # Base de Datos
     # ==========================================================
-    # Si DATABASE_URL viene vacío => sqlite:///local.db (create_app lo fijará a instance/local.db)
     DATABASE_URL = (os.getenv("DATABASE_URL") or "").strip()
     SQLALCHEMY_DATABASE_URI = DATABASE_URL or "sqlite:///local.db"
     SQLALCHEMY_TRACK_MODIFICATIONS = False
-
     SQLALCHEMY_ENGINE_OPTIONS = {"pool_pre_ping": True}
 
     # ==========================================================
     # Uploads
     # ==========================================================
     UPLOAD_DIR = os.getenv("UPLOAD_DIR", "uploads").strip()
-    UPLOAD_PATH = UPLOAD_DIR  # string/relativo para que __init__ lo resuelva
+    UPLOAD_PATH = UPLOAD_DIR  # relativo (create_app lo resuelve)
 
     MAX_CONTENT_LENGTH = int(os.getenv("MAX_CONTENT_LENGTH", str(20 * 1024 * 1024)))
 
@@ -62,6 +60,16 @@ class Config:
     # App general
     # ==========================================================
     APP_TIMEZONE = os.getenv("APP_TIMEZONE", "America/Santiago").strip()
+
+    # ==========================================================
+    # Plantillas DOCX / PDF
+    # ==========================================================
+    # Directorio donde quedan plantillas fijas (dentro de uploads)
+    DOCX_TEMPLATES_DIR = os.getenv("DOCX_TEMPLATES_DIR", "").strip()
+    OFICIO_TEMPLATE_FILENAME = os.getenv("OFICIO_TEMPLATE_FILENAME", "oficio_respuesta_template_v1.docx").strip()
+
+    # LibreOffice headless para Ubuntu / server
+    LIBREOFFICE_BIN = os.getenv("LIBREOFFICE_BIN", "soffice").strip()
 
     # ==========================================================
     # Static cache-buster

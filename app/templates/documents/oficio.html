@@ -1,0 +1,98 @@
+{% extends "base.html" %}
+{% block title %}Generar Oficio{% endblock %}
+
+{% block extra_head %}
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+{% endblock %}
+
+{% block content %}
+  <div class="card card--big">
+    <div class="page-head">
+      <h1 class="h1">Generar oficio (plantilla oficial)</h1>
+      <div class="page-sub">Completa una vez y descarga el PDF listo.</div>
+      <div class="muted" style="margin-top:6px;">
+        Plantilla: <code>uploads/templates/oficio_respuesta_template_v1.docx</code>
+      </div>
+    </div>
+
+    <form method="POST" action="{{ url_for('documents.oficio_post') }}" class="form">
+      {{ form.csrf_token }}
+
+      <div class="form__grid">
+        <div class="form__row">
+          <label class="label" for="numero_solicitud">{{ form.numero_solicitud.label.text }}</label>
+          {{ form.numero_solicitud(class="input", id="numero_solicitud") }}
+          {% if form.numero_solicitud.errors %}
+            <div class="help" style="color:#b91c1c;">{{ form.numero_solicitud.errors[0] }}</div>
+          {% endif %}
+        </div>
+
+        <div class="form__row">
+          <label class="label" for="fecha_solicitud">{{ form.fecha_solicitud.label.text }}</label>
+          <div style="display:flex; gap:8px; align-items:center;">
+            {{ form.fecha_solicitud(class="input", id="fecha_solicitud") }}
+            <button class="btn btn--ghost btn--small" type="button" id="fecha_clear">Limpiar</button>
+          </div>
+          {% if form.fecha_solicitud.errors %}
+            <div class="help" style="color:#b91c1c;">{{ form.fecha_solicitud.errors[0] }}</div>
+          {% else %}
+            <div class="help">En el documento queda como dd/mm/aaaa.</div>
+          {% endif %}
+        </div>
+      </div>
+
+      <div class="form__row">
+        <label class="label" for="tenor_literal">{{ form.tenor_literal.label.text }}</label>
+        {{ form.tenor_literal(class="input", id="tenor_literal", style="min-height:140px;") }}
+        {% if form.tenor_literal.errors %}
+          <div class="help" style="color:#b91c1c;">{{ form.tenor_literal.errors[0] }}</div>
+        {% endif %}
+      </div>
+
+      <div class="form__row">
+        <label class="label" for="respuesta">{{ form.respuesta.label.text }}</label>
+        {{ form.respuesta(class="input", id="respuesta", style="min-height:120px;") }}
+        {% if form.respuesta.errors %}
+          <div class="help" style="color:#b91c1c;">{{ form.respuesta.errors[0] }}</div>
+        {% endif %}
+      </div>
+
+      <div class="card" style="padding:14px;">
+        <label class="admin-check" style="display:flex; gap:10px; align-items:center;">
+          {{ form.guardar_pdf() }}
+          <span><strong>{{ form.guardar_pdf.label.text }}</strong></span>
+        </label>
+        <div class="help" style="margin-top:6px;">
+          Si lo activas, se guarda en <code>uploads/generated</code> y aparece en Explorar.
+        </div>
+      </div>
+
+      <div class="actions">
+        <button class="btn" type="submit">📄 Generar PDF</button>
+        <a class="btn btn--ghost" href="{{ url_for('documents.index') }}">Volver</a>
+      </div>
+    </form>
+  </div>
+{% endblock %}
+
+{% block extra_scripts %}
+  <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+  <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/es.js"></script>
+  <script>
+    window.addEventListener("DOMContentLoaded", () => {
+      const fechaInput = document.querySelector("#fecha_solicitud");
+      if (fechaInput) {
+        flatpickr(fechaInput, { locale: "es", dateFormat: "d-m-Y", allowInput: true });
+      }
+
+      const clearBtn = document.querySelector("#fecha_clear");
+      if (clearBtn && fechaInput) {
+        clearBtn.addEventListener("click", () => {
+          const inst = fechaInput._flatpickr;
+          if (inst) inst.clear();
+          fechaInput.value = "";
+        });
+      }
+    });
+  </script>
+{% endblock %}

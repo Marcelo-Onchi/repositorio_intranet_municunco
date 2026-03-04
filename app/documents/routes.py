@@ -1,11 +1,15 @@
 from __future__ import annotations
 
 import mimetypes
+import shutil
+import subprocess
+import tempfile
 from datetime import date, datetime, time, timedelta
 from pathlib import Path
 from typing import Optional
 from uuid import uuid4
 
+from docx import Document as DocxDocument
 from flask import abort, current_app, flash, redirect, render_template, request, send_file, url_for
 from flask_login import current_user, login_required
 from werkzeug.utils import secure_filename
@@ -13,6 +17,7 @@ from werkzeug.utils import secure_filename
 from app.extensions import db
 from app.models import Category, Document, GoogleToken
 from . import bp
+from .forms import FillOficioForm
 
 
 # =========================================================
@@ -100,6 +105,139 @@ def _create_calendar_deadline_best_effort(title: str, due: date) -> bool:
 def _is_previewable(filename: str) -> bool:
     fn = (filename or "").lower()
     return fn.endswith((".pdf", ".png", ".jpg", ".jpeg", ".webp"))
+
+
+def _is_docx(filename: str) -> bool:
+    return (filename or "").lower().endswith(".docx")
+
+
+def _ddmmyyyy_to_slash(raw_dd_mm_yyyy: str) -> str:
+    """
+    UI: dd-mm-aaaa  -> Documento: dd/mm/aaaa
+    """
+    raw = (raw_dd_mm_yyyy or "").strip()
+    if len(raw) == 10 and raw[2] == "-" and raw[5] == "-":
+        return raw.replace("-", "/")
+    return raw
+
+
+def _docx_replace_text(doc: DocxDocument, mapping: dict[str, str]) -> None:
+    """
+    Reemplazo simple de strings en párrafos y tablas.
+    OJO: paragraph.text puede “aplanar” formato dentro del párrafo.
+    Para oficios típicos funciona perfecto si los tags están completos (sin partirse).
+    """
+    for p in doc.paragraphs:
+        t = p.text or ""
+        new_t = t
+        for k, v in mapping.items():
+            if k in new_t:
+                new_t = new_t.replace(k, v)
+        if new_t != t:
+            p.text = new_t
+
+    for table in doc.tables:
+        for row in table.rows:
+            for cell in row.cells:
+                for p in cell.paragraphs:
+                    t = p.text or ""
+                    new_t = t
+                    for k, v in mapping.items():
+                        if k in new_t:
+                            new_t = new_t.replace(k, v)
+                    if new_t != t:
+                        p.text = new_t
+
+
+def _convert_docx_to_pdf(docx_path: Path, out_dir: Path) -> Path:
+    """
+    Convierte DOCX -> PDF.
+    Prioridad:
+      1) LibreOffice (soffice) si existe en PATH (Ubuntu recomendado)
+      2) docx2pdf (Windows + Word instalado)
+    """
+    out_dir.mkdir(parents=True, exist_ok=True)
+
+    lo_bin = (current_app.config.get("LIBREOFFICE_BIN") or "soffice").strip()
+    lo_real = shutil.which(lo_bin) or shutil.which("soffice")
+
+    if lo_real:
+        cmd = [
+            lo_real,
+            "--headless",
+            "--nologo",
+            "--nofirststartwizard",
+            "--convert-to",
+            "pdf",
+            "--outdir",
+            str(out_dir),
+            str(docx_path),
+        ]
+        proc = subprocess.run(cmd, capture_output=True, text=True)
+        if proc.returncode != 0:
+            raise RuntimeError(f"LibreOffice falló al convertir a PDF: {proc.stderr or proc.stdout}")
+
+        pdf_path = out_dir / f"{docx_path.stem}.pdf"
+        if not pdf_path.exists():
+            raise RuntimeError("No se generó el PDF (salida inesperada de LibreOffice).")
+        return pdf_path
+
+    # Fallback docx2pdf (requiere Word en Windows)
+    try:
+        from docx2pdf import convert  # type: ignore
+    except Exception:
+        raise RuntimeError(
+            "No hay convertidor disponible. En servidor Ubuntu instala LibreOffice. "
+            "En Windows puedes usar docx2pdf + Word."
+        )
+
+    pdf_path = out_dir / f"{docx_path.stem}.pdf"
+    try:
+        convert(str(docx_path), str(pdf_path))
+    except Exception as e:
+        raise RuntimeError(f"docx2pdf falló (¿Word instalado?): {e}")
+
+    if not pdf_path.exists():
+        raise RuntimeError("No se generó el PDF con docx2pdf.")
+    return pdf_path
+
+
+def _safe_slug(value: str) -> str:
+    raw = (value or "").strip()
+    out = []
+    for ch in raw:
+        if ch.isalnum() or ch in ("-", "_"):
+            out.append(ch)
+    return "".join(out)[:60] or "generado"
+
+
+def _generated_dir() -> Path:
+    """
+    Carpeta persistente para PDFs generados (para guardarlos como Document).
+    """
+    base = Path(current_app.config["UPLOAD_PATH"])
+    gen = base / "generated"
+    gen.mkdir(parents=True, exist_ok=True)
+    return gen
+
+
+def _templates_dir() -> Path:
+    """
+    Carpeta persistente para plantillas DOCX fijas.
+    Por defecto: uploads/templates
+    """
+    base = Path(current_app.config["UPLOAD_PATH"])
+    configured = (current_app.config.get("DOCX_TEMPLATES_DIR") or "").strip()
+    if configured:
+        return Path(configured)
+    return base / "templates"
+
+
+def _oficio_template_path() -> Path:
+    """
+    Ruta final al DOCX oficial.
+    """
+    return _templates_dir() / (current_app.config.get("OFICIO_TEMPLATE_FILENAME") or "oficio_respuesta_template_v1.docx")
 
 
 # =========================================================
@@ -286,7 +424,6 @@ def upload_post():
         db.session.add(doc)
         saved += 1
 
-        # ✅ Evento por cada doc (si se definió due_date y Google está conectado)
         if due and gc_connected:
             ok = _create_calendar_deadline_best_effort(title=doc.filename, due=due)
             if ok:
@@ -358,3 +495,230 @@ def delete(doc_id: int):
 
     flash("Documento eliminado.", "success")
     return redirect(url_for("documents.index"))
+
+
+# =========================================================
+# Completar DOCX subido (desde Explorar) -> PDF
+# =========================================================
+@bp.get("/fill/<int:doc_id>")
+@login_required
+def fill(doc_id: int):
+    doc = Document.query.get_or_404(doc_id)
+
+    if not _is_docx(doc.filename):
+        flash("Solo puedes completar plantillas .DOCX.", "warning")
+        return redirect(url_for("documents.index"))
+
+    form = FillOficioForm(
+        numero_solicitud="MU071T0001762",
+        fecha_solicitud="20-01-2026",
+        tenor_literal=(
+            "Estimado/a solicito respetuosamente se me otorgue acceso a la siguiente información vinculada "
+            "al proceso de selección para el cargo de Trabajadora Social del Programa de Salud Mental de Los Laureles, "
+            "en el cual participé como postulante:…"
+        ),
+        respuesta="Se adjunta lo solicitado, exceptuando el informe de evaluación psicológica, ya que no corroboró identidad.",
+        guardar_pdf=True,
+    )
+
+    return render_template("documents/fill.html", doc=doc, form=form)
+
+
+@bp.post("/fill/<int:doc_id>")
+@login_required
+def fill_post(doc_id: int):
+    src_doc = Document.query.get_or_404(doc_id)
+
+    if not _is_docx(src_doc.filename):
+        flash("Solo puedes completar plantillas .DOCX.", "warning")
+        return redirect(url_for("documents.index"))
+
+    form = FillOficioForm()
+    if not form.validate_on_submit():
+        return render_template("documents/fill.html", doc=src_doc, form=form), 400
+
+    numero = (form.numero_solicitud.data or "").strip()
+    fecha_doc = _ddmmyyyy_to_slash(form.fecha_solicitud.data or "")
+    tenor = (form.tenor_literal.data or "").strip()
+    resp = (form.respuesta.data or "").strip()
+    guardar_pdf = bool(form.guardar_pdf.data)
+
+    src_path = Path(src_doc.path)
+    if not src_path.exists():
+        flash("Archivo no encontrado en disco.", "danger")
+        return redirect(url_for("documents.index"))
+
+    mapping = {
+        "{{NUM_SOLICITUD}}": numero,
+        "{{FECHA_SOLICITUD}}": fecha_doc,
+        "{{TENOR_LITERAL}}": tenor,
+        "{{RESPUESTA}}": resp,
+    }
+
+    safe_num = _safe_slug(numero)
+
+    try:
+        with tempfile.TemporaryDirectory(prefix="municunco_fill_") as tmp:
+            tmp_dir = Path(tmp)
+
+            d = DocxDocument(str(src_path))
+            _docx_replace_text(d, mapping)
+
+            out_docx = tmp_dir / f"oficio_{safe_num}.docx"
+            d.save(str(out_docx))
+
+            tmp_pdf = _convert_docx_to_pdf(out_docx, tmp_dir)
+
+            if guardar_pdf:
+                gen_dir = _generated_dir()
+                final_name = f"Oficio_{safe_num}_{uuid4().hex[:8]}.pdf"
+                final_path = gen_dir / final_name
+                shutil.copyfile(tmp_pdf, final_path)
+
+                size = final_path.stat().st_size if final_path.exists() else 0
+
+                new_doc = Document(
+                    name=f"Oficio_{safe_num}"[:160],
+                    filename=final_name[:260],
+                    path=str(final_path),
+                    file_size=int(size),
+                    category_id=src_doc.category_id,
+                    uploaded_by_id=current_user.id,
+                    due_date=None,
+                )
+                db.session.add(new_doc)
+                db.session.commit()
+
+                flash("✅ PDF generado y guardado en el repositorio.", "success")
+
+                return send_file(
+                    final_path,
+                    mimetype="application/pdf",
+                    as_attachment=True,
+                    download_name=final_name,
+                )
+
+            return send_file(
+                tmp_pdf,
+                mimetype="application/pdf",
+                as_attachment=True,
+                download_name=f"Oficio_{safe_num}.pdf",
+            )
+
+    except Exception as e:
+        try:
+            current_app.logger.exception("Fill template failed: %s", e)
+        except Exception:
+            pass
+        flash(f"No se pudo generar el PDF: {e}", "danger")
+        return render_template("documents/fill.html", doc=src_doc, form=form), 500
+
+
+# =========================================================
+# Oficio oficial (plantilla fija en uploads/templates) -> PDF
+# URL: /documents/oficio
+# =========================================================
+@bp.get("/oficio")
+@login_required
+def oficio():
+    tpl_path = _oficio_template_path()
+    if not tpl_path.exists():
+        flash(f"No se encontró la plantilla oficial en: {tpl_path}", "danger")
+        return redirect(url_for("documents.index"))
+
+    form = FillOficioForm(
+        numero_solicitud="MU071T0001762",
+        fecha_solicitud="20-01-2026",
+        tenor_literal=(
+            "Estimado/a solicito respetuosamente se me otorgue acceso a la siguiente información vinculada "
+            "al proceso de selección para el cargo de Trabajadora Social del Programa de Salud Mental de Los Laureles, "
+            "en el cual participé como postulante:…"
+        ),
+        respuesta="Se adjunta lo solicitado, exceptuando el informe de evaluación psicológica, ya que no corroboró identidad.",
+        guardar_pdf=True,
+    )
+    return render_template("documents/oficio.html", form=form)
+
+
+@bp.post("/oficio")
+@login_required
+def oficio_post():
+    tpl_path = _oficio_template_path()
+    if not tpl_path.exists():
+        flash(f"No se encontró la plantilla oficial en: {tpl_path}", "danger")
+        return redirect(url_for("documents.index"))
+
+    form = FillOficioForm()
+    if not form.validate_on_submit():
+        return render_template("documents/oficio.html", form=form), 400
+
+    numero = (form.numero_solicitud.data or "").strip()
+    fecha_doc = _ddmmyyyy_to_slash(form.fecha_solicitud.data or "")
+    tenor = (form.tenor_literal.data or "").strip()
+    resp = (form.respuesta.data or "").strip()
+    guardar_pdf = bool(form.guardar_pdf.data)
+
+    mapping = {
+        "{{NUM_SOLICITUD}}": numero,
+        "{{FECHA_SOLICITUD}}": fecha_doc,
+        "{{TENOR_LITERAL}}": tenor,
+        "{{RESPUESTA}}": resp,
+    }
+
+    safe_num = _safe_slug(numero)
+
+    try:
+        with tempfile.TemporaryDirectory(prefix="municunco_oficio_") as tmp:
+            tmp_dir = Path(tmp)
+
+            d = DocxDocument(str(tpl_path))
+            _docx_replace_text(d, mapping)
+
+            out_docx = tmp_dir / f"oficio_{safe_num}.docx"
+            d.save(str(out_docx))
+
+            tmp_pdf = _convert_docx_to_pdf(out_docx, tmp_dir)
+
+            if guardar_pdf:
+                gen_dir = _generated_dir()
+                final_name = f"Oficio_{safe_num}_{uuid4().hex[:8]}.pdf"
+                final_path = gen_dir / final_name
+                shutil.copyfile(tmp_pdf, final_path)
+
+                size = final_path.stat().st_size if final_path.exists() else 0
+
+                new_doc = Document(
+                    name=f"Oficio_{safe_num}"[:160],
+                    filename=final_name[:260],
+                    path=str(final_path),
+                    file_size=int(size),
+                    category_id=None,
+                    uploaded_by_id=current_user.id,
+                    due_date=None,
+                )
+                db.session.add(new_doc)
+                db.session.commit()
+
+                flash("✅ PDF generado y guardado en el repositorio.", "success")
+
+                return send_file(
+                    final_path,
+                    mimetype="application/pdf",
+                    as_attachment=True,
+                    download_name=final_name,
+                )
+
+            return send_file(
+                tmp_pdf,
+                mimetype="application/pdf",
+                as_attachment=True,
+                download_name=f"Oficio_{safe_num}.pdf",
+            )
+
+    except Exception as e:
+        try:
+            current_app.logger.exception("Oficio generation failed: %s", e)
+        except Exception:
+            pass
+        flash(f"No se pudo generar el PDF: {e}", "danger")
+        return render_template("documents/oficio.html", form=form), 500
