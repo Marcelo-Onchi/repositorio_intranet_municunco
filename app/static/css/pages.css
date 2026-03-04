@@ -1,8 +1,8 @@
-/* =========================================
-   PAGES.CSS — Municunco (2026) — FIX PRO
-   - Admin: details forms en panel bonito
-   - Docs: botones toolbar separados
-========================================= */
+/* =========================================================
+   PAGES.CSS — Municunco (2026)
+   - Dashboard / Docs / Upload / Admin
+   - Mantiene cada página aislada, base.css queda “global”
+========================================================= */
 
 /* =========================================================
    Dashboard
@@ -33,7 +33,7 @@
 }
 
 /* =========================================================
-   Toolbar (Docs)
+   Docs — toolbar / tabla
 ========================================================= */
 .toolbar{
   display:grid;
@@ -42,7 +42,6 @@
   align-items:start;
   margin: 10px 0 14px;
 }
-
 .toolbar__left{
   display:grid;
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
@@ -50,14 +49,13 @@
   align-items:start;
   min-width:0;
 }
-
 .toolbar__field--search{ min-width: 260px; }
 .toolbar__field--cat{ min-width: 220px; }
 .toolbar__field--date{ min-width: 160px; }
 .toolbar__field--due{ min-width: 210px; }
 .toolbar__field--sort{ min-width: 220px; }
 
-/* ✅ FIX: botones Aplicar/Subir con espacio + wrap */
+/* Botones con espacio (Aplicar / Subir) */
 .toolbar__right{
   display:flex;
   gap: 12px;
@@ -78,26 +76,21 @@
   .toolbar__right .btn{ min-width: 120px; }
 }
 
-/* =========================================================
-   Docs table (DESKTOP)
-========================================================= */
+/* Tabla docs (desktop) */
 .table--docs{
   table-layout: fixed;
   min-width: 1040px;
 }
-
 .table--docs th{
   overflow:hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-
 .table--docs th:nth-child(2), .table--docs td:nth-child(2){ width: 170px; }
 .table--docs th:nth-child(3), .table--docs td:nth-child(3){ width: 170px; }
 .table--docs th:nth-child(4), .table--docs td:nth-child(4){ width: 170px; }
 .table--docs th:nth-child(5), .table--docs td:nth-child(5){ width: 110px; }
 .table--docs th:nth-child(6), .table--docs td:nth-child(6){ width: 260px; }
-
 .table--docs td{ overflow:hidden; }
 
 .table--docs .file-pill{
@@ -146,7 +139,7 @@
 .table--docs .actions{
   display:flex;
   flex-direction:column;
-  gap: 10px;              /* ✅ un poco más aire */
+  gap: 10px;
   align-items:stretch;
 }
 .table--docs .actions > *{ width: 100%; }
@@ -161,9 +154,7 @@
 .table--docs .actions form{ width:100%; }
 .table--docs .actions form button{ width:100%; }
 
-/* =========================================================
-   Docs stack (MOBILE)
-========================================================= */
+/* Docs “stack cards” en mobile */
 @media (max-width: 860px){
   .table--docs{ min-width: 0; table-layout: auto; }
   .table--docs thead{ display:none; }
@@ -223,12 +214,10 @@
     background: rgba(2,132,199,.04);
     border-radius: 16px;
   }
-
-  .table--docs .due-wrap{ justify-content:flex-start; }
 }
 
 /* =========================================================
-   Upload (Dropzone)
+   Upload — Dropzone
 ========================================================= */
 .dropzone{
   border: 2px dashed rgba(2,132,199,.45);
@@ -256,7 +245,7 @@
 .dropzone__count{ color: var(--c-text-2); font-size: 13px; font-weight: 900; }
 
 /* =========================================================
-   Admin styles
+   Admin
 ========================================================= */
 .admin-card{
   background: linear-gradient(180deg, #fff 0%, rgba(241,245,249,.55) 100%);
@@ -286,7 +275,7 @@
 
 .form--compact{
   gap: 10px;
-  padding: 0;            /* ✅ en admin la usamos como panel, padding lo pone el contenedor */
+  padding: 0;
   margin-top: 0;
 }
 .form--compact .input{ padding: 10px 12px; }
@@ -304,10 +293,6 @@
 .table--admin th:nth-child(5), .table--admin td:nth-child(5){ width: 160px; }
 .table--admin th:nth-child(6), .table--admin td:nth-child(6){ width: 260px; }
 
-@media (max-width: 860px){
-  .table--admin{ min-width: 0; }
-}
-
 /* Cats */
 .table--cats{
   table-layout: fixed;
@@ -317,14 +302,14 @@
 .table--cats th:nth-child(2), .table--cats td:nth-child(2){ width: 220px; }
 .cats-actions form{ display:flex; justify-content:flex-start; }
 
-@media (max-width: 860px){
-  .table--cats{ min-width: 0; }
+/* =========================================================
+   Admin — Action panel + Details (pro)
+========================================================= */
+.table--admin td:last-child{
+  padding-top: 14px;
+  padding-bottom: 14px;
 }
 
-/* =========================================================
-   ✅ Admin — FIX Acciones + details forms BONITOS
-   (Esto es lo que te arregla Editar/Reset “feo”)
-========================================================= */
 .table--admin .admin-actionpanel{
   display:grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -332,109 +317,21 @@
   align-items: start;
   justify-items: stretch;
 }
-
 .table--admin .admin-actionpanel > details,
 .table--admin .admin-actionpanel > form{
   min-width:0;
 }
 
-/* botones dentro */
+/* Botones (default admin) */
 .table--admin .admin-actionpanel .btn{
   width: 100%;
   padding: 9px 10px;
   border-radius: 12px;
   font-size: 13px;
   min-height: 40px;
-}
 
-/* ghost más neutro en admin */
-.table--admin .btn--ghost{
-  background: rgba(15,23,42,.04);
-  border-color: rgba(15,23,42,.10);
-  color: var(--c-text-2);
-}
-.table--admin .btn--ghost:hover{
-  background: rgba(15,23,42,.07);
-  border-color: rgba(15,23,42,.16);
-}
-
-/* details: no rompe layout */
-.table--admin details.admin-details{
-  border: 0;
-  background: transparent;
-  overflow: visible;
-}
-
-/* cuando abre: el formulario se vuelve PANEL y ocupa TODO */
-.table--admin details.admin-details[open]{
-  grid-column: 1 / -1;   /* ✅ ocupa todo el ancho */
-}
-
-.table--admin details.admin-details[open] > form{
-  margin-top: 10px;
-  padding: 12px;
-  border-radius: 16px;
-  background: #fff;
-  border: 1px solid rgba(226,232,240,.95);
-  box-shadow: 0 18px 60px rgba(15,23,42,.08);
-}
-
-/* inputs full y bien */
-.table--admin details.admin-details[open] > form .input{
-  width: 100%;
-}
-
-/* el botón guardar/actualizar full */
-.table--admin details.admin-details[open] > form .btn{
-  width: 100%;
-}
-
-/* separar mejor switches */
-.table--admin details.admin-details[open] .admin-switches{
-  gap: 12px;
-}
-
-/* Eliminar en ancho completo */
-.table--admin .admin-actionpanel form:last-child{
-  grid-column: 1 / -1;
-}
-
-/* Mobile: acciones a 1 columna */
-@media (max-width: 980px){
-  .table--admin .admin-actionpanel{
-    grid-template-columns: 1fr;
-  }
-  .table--admin details.admin-details[open]{
-    grid-column: auto;
-  }
-  .table--admin .admin-actionpanel form:last-child{
-    grid-column: auto;
-  }
-}
-
-/* =========================================================
-   Responsive stats
-========================================================= */
-@media (max-width: 980px){
-  .stats{ grid-template-columns: repeat(2, minmax(0, 1fr)); }
-}
-@media (max-width: 720px){
-  .stats{ grid-template-columns: 1fr; }
-}
-/* =========================================================
-   Admin — POLISH (solo estética + mejor layout en details)
-========================================================= */
-
-/* Columna acciones: un poco más de aire en toda la celda */
-.table--admin td:last-child{
-  padding-top: 14px;
-  padding-bottom: 14px;
-}
-
-/* Botones del actionpanel: más compactos y menos “gris ladrillo” */
-.table--admin .admin-actionpanel .btn{
   background: rgba(2,132,199,.06);
-  border-color: rgba(2,132,199,.16);
+  border: 1px solid rgba(2,132,199,.16);
   color: var(--c-primary-3);
   font-weight: 950;
 }
@@ -443,7 +340,6 @@
   border-color: rgba(2,132,199,.24);
 }
 
-/* Danger queda igual de potente */
 .table--admin .admin-actionpanel .btn--danger{
   background: var(--c-error);
   border-color: transparent;
@@ -453,7 +349,13 @@
   background: #b91c1c;
 }
 
-/* Details: el summary (Editar/Reset) se ve como “tab” */
+/* details */
+.table--admin details.admin-details{
+  border: 0;
+  background: transparent;
+  overflow: visible;
+}
+
 .table--admin details.admin-details > summary.btn{
   background: rgba(15,23,42,.04);
   border-color: rgba(15,23,42,.10);
@@ -464,8 +366,11 @@
   border-color: rgba(15,23,42,.16);
 }
 
-/* ✅ Panel abierto: caja más pro + título arriba */
+/* Cuando abre: ocupa todo el ancho y se ve “panel” */
+.table--admin details.admin-details[open]{ grid-column: 1 / -1; }
+
 .table--admin details.admin-details[open] > form{
+  margin-top: 10px;
   position: relative;
   padding: 14px;
   border-radius: 16px;
@@ -474,7 +379,7 @@
   box-shadow: 0 18px 60px rgba(15,23,42,.08);
 }
 
-/* “header” visual del panel usando pseudo-elemento */
+/* Título visual sin tocar HTML */
 .table--admin details.admin-details[open] > form::before{
   content: "Editar usuario";
   display: block;
@@ -485,22 +390,17 @@
   margin-bottom: 10px;
   text-transform: uppercase;
 }
-
-/* Si es Reset, cambiamos el título (sin tocar HTML) */
 .table--admin details.admin-details:nth-of-type(2)[open] > form::before{
   content: "Reset contraseña";
 }
 
-/* Inputs del panel: un pelín más compactos */
-.table--admin details.admin-details[open] > form .label{
-  font-size: 12px;
-}
+.table--admin details.admin-details[open] > form .label{ font-size: 12px; }
 .table--admin details.admin-details[open] > form .input{
   border-radius: 14px;
   padding: 10px 12px;
 }
 
-/* Checks Admin/Activo: alineados y con aire */
+/* Checks alineados */
 .table--admin details.admin-details[open] .admin-switches{
   margin-top: 8px;
   padding: 10px 12px;
@@ -508,37 +408,47 @@
   background: rgba(2,132,199,.04);
   border: 1px solid rgba(2,132,199,.14);
 }
-.table--admin details.admin-details[open] .admin-check{
-  gap: 10px;
-}
+.table--admin details.admin-details[open] .admin-check{ gap: 10px; }
 .table--admin details.admin-details[open] .admin-check input[type="checkbox"]{
   width: 16px;
   height: 16px;
   accent-color: var(--c-primary);
 }
 
-/* Botón Guardar/Actualizar: full y con separación */
+/* Guardar/Actualizar full ancho */
 .table--admin details.admin-details[open] > form .btn{
   margin-top: 10px;
   min-height: 42px;
   border-radius: 14px;
+  width: 100%;
 }
 
-/* Que los botones “no abiertos” respiren */
-.table--admin .admin-actionpanel > form{
-  margin-top: 2px;
-}
+/* Eliminar full-width */
+.table--admin .admin-actionpanel form:last-child{ grid-column: 1 / -1; }
 
-/* En pantallas medias: mantiene 2 columnas, pero con mejor balance */
+/* =========================================================
+   Responsive — Admin tables + actions
+========================================================= */
 @media (max-width: 1200px){
-  .table--admin{
-    min-width: 920px;
-  }
+  .table--admin{ min-width: 920px; }
+}
+@media (max-width: 980px){
+  .table--admin .admin-actionpanel{ grid-template-columns: 1fr; }
+  .table--admin details.admin-details[open]{ grid-column: auto; }
+  .table--admin .admin-actionpanel form:last-child{ grid-column: auto; }
+  .table--admin details.admin-details[open] > form{ padding: 12px; }
+}
+@media (max-width: 860px){
+  .table--admin{ min-width: 0; }
+  .table--cats{ min-width: 0; }
 }
 
-/* Mobile: panel abierto no se vea gigante */
+/* =========================================================
+   Responsive — Dashboard stats
+========================================================= */
 @media (max-width: 980px){
-  .table--admin details.admin-details[open] > form{
-    padding: 12px;
-  }
+  .stats{ grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 720px){
+  .stats{ grid-template-columns: 1fr; }
 }
