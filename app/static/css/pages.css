@@ -421,3 +421,124 @@
 @media (max-width: 720px){
   .stats{ grid-template-columns: 1fr; }
 }
+/* =========================================================
+   Admin — POLISH (solo estética + mejor layout en details)
+========================================================= */
+
+/* Columna acciones: un poco más de aire en toda la celda */
+.table--admin td:last-child{
+  padding-top: 14px;
+  padding-bottom: 14px;
+}
+
+/* Botones del actionpanel: más compactos y menos “gris ladrillo” */
+.table--admin .admin-actionpanel .btn{
+  background: rgba(2,132,199,.06);
+  border-color: rgba(2,132,199,.16);
+  color: var(--c-primary-3);
+  font-weight: 950;
+}
+.table--admin .admin-actionpanel .btn:hover{
+  background: rgba(2,132,199,.10);
+  border-color: rgba(2,132,199,.24);
+}
+
+/* Danger queda igual de potente */
+.table--admin .admin-actionpanel .btn--danger{
+  background: var(--c-error);
+  border-color: transparent;
+  color: #fff;
+}
+.table--admin .admin-actionpanel .btn--danger:hover{
+  background: #b91c1c;
+}
+
+/* Details: el summary (Editar/Reset) se ve como “tab” */
+.table--admin details.admin-details > summary.btn{
+  background: rgba(15,23,42,.04);
+  border-color: rgba(15,23,42,.10);
+  color: var(--c-text-2);
+}
+.table--admin details.admin-details > summary.btn:hover{
+  background: rgba(15,23,42,.07);
+  border-color: rgba(15,23,42,.16);
+}
+
+/* ✅ Panel abierto: caja más pro + título arriba */
+.table--admin details.admin-details[open] > form{
+  position: relative;
+  padding: 14px;
+  border-radius: 16px;
+  background: linear-gradient(180deg, #fff 0%, rgba(241,245,249,.65) 100%);
+  border: 1px solid rgba(226,232,240,.95);
+  box-shadow: 0 18px 60px rgba(15,23,42,.08);
+}
+
+/* “header” visual del panel usando pseudo-elemento */
+.table--admin details.admin-details[open] > form::before{
+  content: "Editar usuario";
+  display: block;
+  font-size: 12px;
+  font-weight: 950;
+  letter-spacing: .08em;
+  color: var(--c-text-3);
+  margin-bottom: 10px;
+  text-transform: uppercase;
+}
+
+/* Si es Reset, cambiamos el título (sin tocar HTML) */
+.table--admin details.admin-details:nth-of-type(2)[open] > form::before{
+  content: "Reset contraseña";
+}
+
+/* Inputs del panel: un pelín más compactos */
+.table--admin details.admin-details[open] > form .label{
+  font-size: 12px;
+}
+.table--admin details.admin-details[open] > form .input{
+  border-radius: 14px;
+  padding: 10px 12px;
+}
+
+/* Checks Admin/Activo: alineados y con aire */
+.table--admin details.admin-details[open] .admin-switches{
+  margin-top: 8px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: rgba(2,132,199,.04);
+  border: 1px solid rgba(2,132,199,.14);
+}
+.table--admin details.admin-details[open] .admin-check{
+  gap: 10px;
+}
+.table--admin details.admin-details[open] .admin-check input[type="checkbox"]{
+  width: 16px;
+  height: 16px;
+  accent-color: var(--c-primary);
+}
+
+/* Botón Guardar/Actualizar: full y con separación */
+.table--admin details.admin-details[open] > form .btn{
+  margin-top: 10px;
+  min-height: 42px;
+  border-radius: 14px;
+}
+
+/* Que los botones “no abiertos” respiren */
+.table--admin .admin-actionpanel > form{
+  margin-top: 2px;
+}
+
+/* En pantallas medias: mantiene 2 columnas, pero con mejor balance */
+@media (max-width: 1200px){
+  .table--admin{
+    min-width: 920px;
+  }
+}
+
+/* Mobile: panel abierto no se vea gigante */
+@media (max-width: 980px){
+  .table--admin details.admin-details[open] > form{
+    padding: 12px;
+  }
+}
