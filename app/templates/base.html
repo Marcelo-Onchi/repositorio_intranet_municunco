@@ -73,7 +73,7 @@
     {% set path = request.path or "" %}
     {% set is_auth = path.startswith("/auth") %}
 
-    <main id="main" class="page">
+    <main id="main" class="page" role="main">
       <div class="container">
         <div class="layout {% if is_auth %}layout--auth{% endif %}">
           {% if not is_auth %}
@@ -84,33 +84,41 @@
                 <nav class="nav">
                   {% if current_user.is_authenticated %}
                     {% set dash_url = url_for("documents.dashboard") %}
-                    <a class="nav__item {% if path == dash_url %}is-active{% endif %}" href="{{ dash_url }}">
-                      📊 Dashboard
-                    </a>
+                    <a
+                      class="nav__item {% if path == dash_url %}is-active{% endif %}"
+                      href="{{ dash_url }}"
+                      {% if path == dash_url %}aria-current="page"{% endif %}
+                    >📊 Dashboard</a>
 
                     {% set upload_url = url_for("documents.upload") %}
-                    <a class="nav__item {% if path == upload_url %}is-active{% endif %}" href="{{ upload_url }}">
-                      📤 Subir Documento
-                    </a>
+                    <a
+                      class="nav__item {% if path == upload_url %}is-active{% endif %}"
+                      href="{{ upload_url }}"
+                      {% if path == upload_url %}aria-current="page"{% endif %}
+                    >📤 Subir Documento</a>
 
                     {% set docs_url = url_for("documents.index") %}
+                    {% set docs_active = (path.startswith('/documents') and path != dash_url and path != upload_url) %}
                     <a
-                      class="nav__item {% if path.startswith('/documents') and path != dash_url and path != upload_url %}is-active{% endif %}"
+                      class="nav__item {% if docs_active %}is-active{% endif %}"
                       href="{{ docs_url }}"
-                    >
-                      📁 Explorar
-                    </a>
+                      {% if docs_active %}aria-current="page"{% endif %}
+                    >📁 Explorar</a>
 
                     {% set cal_url = url_for("calendar.index") %}
-                    <a class="nav__item {% if path.startswith('/calendar') %}is-active{% endif %}" href="{{ cal_url }}">
-                      🗓️ Mi calendario
-                    </a>
+                    <a
+                      class="nav__item {% if path.startswith('/calendar') %}is-active{% endif %}"
+                      href="{{ cal_url }}"
+                      {% if path.startswith('/calendar') %}aria-current="page"{% endif %}
+                    >🗓️ Mi calendario</a>
 
                     {% if current_user.is_admin %}
                       {% set admin_url = url_for("admin.index") %}
-                      <a class="nav__item {% if path.startswith('/admin') %}is-active{% endif %}" href="{{ admin_url }}">
-                        🛡️ Admin
-                      </a>
+                      <a
+                        class="nav__item {% if path.startswith('/admin') %}is-active{% endif %}"
+                        href="{{ admin_url }}"
+                        {% if path.startswith('/admin') %}aria-current="page"{% endif %}
+                      >🛡️ Admin</a>
                     {% endif %}
 
                     <div class="nav__sep" role="separator" aria-hidden="true"></div>
@@ -118,7 +126,11 @@
                     <a class="nav__item nav__item--danger" href="{{ url_for('auth.logout') }}">🚪 Logout</a>
                   {% else %}
                     {% set login_url = url_for("auth.login") %}
-                    <a class="nav__item {% if path == login_url %}is-active{% endif %}" href="{{ login_url }}">🔐 Login</a>
+                    <a
+                      class="nav__item {% if path == login_url %}is-active{% endif %}"
+                      href="{{ login_url }}"
+                      {% if path == login_url %}aria-current="page"{% endif %}
+                    >🔐 Login</a>
                     <div class="nav__hint">Inicia sesión para acceder al repositorio.</div>
                   {% endif %}
                 </nav>

@@ -1,8 +1,7 @@
-/* =========================================
+/* ==========================================================================
    PAGES.CSS — Municunco (2026)
-   - Dashboard / Admin / Docs / Upload
-   - Responsive real (sin textos “en vertical”)
-========================================= */
+   Objetivo: módulos (Dashboard / Docs / Admin) con responsive real.
+   ========================================================================== */
 
 /* =========================================================
    Dashboard
@@ -41,47 +40,44 @@
 
 /* =========================================================
    Toolbar (Docs)
+   - Grid con right “pegado” sin hacks.
 ========================================================= */
 .toolbar{
   display:grid;
   grid-template-columns: 1fr auto;
   gap: 12px;
-  align-items:start;
+  align-items:end;
   margin: 10px 0 14px;
 }
 
+/* Filtros: auto-fit sin min-width rígido */
 .toolbar__left{
   display:grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   gap: 10px;
-  align-items:start;
+  align-items:end;
   min-width:0;
 }
 
-.toolbar__field--search{ min-width: 260px; }
-.toolbar__field--cat{ min-width: 220px; }
-.toolbar__field--date{ min-width: 160px; }
-.toolbar__field--due{ min-width: 210px; }
-.toolbar__field--sort{ min-width: 220px; }
+/* Búsqueda: puede tomar más aire en desktop */
+.toolbar__field--search{ grid-column: span 2; }
+@media (max-width: 1100px){
+  .toolbar__field--search{ grid-column: auto; }
+}
 
 .toolbar__right{
   display:flex;
   gap: 12px;
-  row-gap: 10px;
   flex-wrap: wrap;
   justify-content:flex-end;
   align-items:center;
-  margin-top: 21px;
-}
-.toolbar__right .btn{
-  white-space: nowrap;
-  min-width: 110px;
+  min-width: 0;
 }
 
 @media (max-width: 860px){
-  .toolbar{ grid-template-columns: 1fr; }
-  .toolbar__right{ justify-content:flex-start; margin-top: 0; }
-  .toolbar__right .btn{ min-width: 120px; }
+  .toolbar{ grid-template-columns: 1fr; align-items:stretch; }
+  .toolbar__right{ justify-content:flex-start; }
+  .toolbar__left{ grid-template-columns: 1fr; }
 }
 
 /* =========================================================
@@ -89,8 +85,14 @@
 ========================================================= */
 .table--docs{
   table-layout: fixed;
-  min-width: 1040px;
 }
+
+/* Ajuste de anchos: estable en 1366/1536 */
+.table--docs th:nth-child(2), .table--docs td:nth-child(2){ width: 170px; }
+.table--docs th:nth-child(3), .table--docs td:nth-child(3){ width: 170px; }
+.table--docs th:nth-child(4), .table--docs td:nth-child(4){ width: 160px; }
+.table--docs th:nth-child(5), .table--docs td:nth-child(5){ width: 110px; }
+.table--docs th:nth-child(6), .table--docs td:nth-child(6){ width: 240px; }
 
 .table--docs th{
   overflow:hidden;
@@ -98,14 +100,9 @@
   white-space: nowrap;
 }
 
-.table--docs th:nth-child(2), .table--docs td:nth-child(2){ width: 170px; }
-.table--docs th:nth-child(3), .table--docs td:nth-child(3){ width: 170px; }
-.table--docs th:nth-child(4), .table--docs td:nth-child(4){ width: 170px; }
-.table--docs th:nth-child(5), .table--docs td:nth-child(5){ width: 110px; }
-.table--docs th:nth-child(6), .table--docs td:nth-child(6){ width: 260px; }
-
 .table--docs td{ overflow:hidden; }
 
+/* Pill del documento */
 .table--docs .file-pill{
   display:flex;
   align-items:center;
@@ -117,7 +114,7 @@
   color: var(--c-primary-3);
 
   padding: 9px 12px;
-  border-radius: 14px;
+  border-radius: var(--r-14);
   background: rgba(2,132,199,.06);
   border: 1px solid rgba(2,132,199,.16);
 }
@@ -148,7 +145,7 @@
   white-space: nowrap;
 }
 
-/* Acciones docs */
+/* Acciones docs: apiladas */
 .table--docs .actions{
   display:flex;
   flex-direction:column;
@@ -158,7 +155,6 @@
 .table--docs .actions > *{ width: 100%; }
 .table--docs .actions .btn{
   width: 100%;
-  white-space: nowrap;
   font-size: 13px;
   padding: 10px 12px;
   border-radius: 12px;
@@ -169,11 +165,11 @@
 
 /* =========================================================
    Docs stack (Mobile)
-   FIX: evita “texto en vertical” (label arriba + valor abajo)
 ========================================================= */
 @media (max-width: 860px){
-  .table--docs{ min-width: 0; table-layout: auto; }
+  .table--docs{ table-layout: auto; }
   .table--docs thead{ display:none; }
+
   .table--docs, .table--docs tbody, .table--docs tr, .table--docs td{
     display:block;
     width:100%;
@@ -196,7 +192,6 @@
   }
   .table--docs td:first-child{ margin-top: 0; }
 
-  /* Cada “celda” se vuelve una mini-card */
   .table--docs td[data-label]{
     display:flex;
     flex-direction: column;
@@ -219,14 +214,9 @@
     line-height: 1.15;
   }
 
-  /* Valores: no romper en letras */
   .table--docs td[data-label] > *{
     max-width: 100%;
     min-width: 0;
-  }
-  .table--docs .badge,
-  .table--docs .file-pill{
-    max-width: 100%;
   }
 
   .table--docs .td-actions{
@@ -240,11 +230,6 @@
     border: 1px solid rgba(2,132,199,.16);
     background: rgba(2,132,199,.04);
     border-radius: 16px;
-  }
-
-  /* Si tienes fechas como texto plano, mantenlas legibles */
-  .table--docs .date-text{
-    white-space: nowrap;
   }
 
   .table--docs .due-wrap{ justify-content:flex-start; }
@@ -279,14 +264,11 @@
 .dropzone__count{ color: var(--c-text-2); font-size: 13px; font-weight: 900; }
 
 @media (max-width: 520px){
-  .dropzone{
-    flex-direction: column;
-    align-items: flex-start;
-  }
+  .dropzone{ flex-direction: column; align-items: flex-start; }
 }
 
 /* =========================================================
-   Admin styles
+   Admin
 ========================================================= */
 .admin-card{
   background: linear-gradient(180deg, #fff 0%, rgba(241,245,249,.55) 100%);
@@ -329,35 +311,37 @@
 /* Admin table */
 .table--admin{
   table-layout: fixed;
-  min-width: 980px;
 }
+
+/* Ojo: NO recortar por defecto la col de acciones,
+   si no el texto/botón se corta cuando hay wrap */
 .table--admin td{ overflow:hidden; }
+
+/* Anchos desktop */
 .table--admin th:nth-child(1), .table--admin td:nth-child(1){ width: 160px; }
 .table--admin th:nth-child(2), .table--admin td:nth-child(2){ width: 260px; }
 .table--admin th:nth-child(3), .table--admin td:nth-child(3){ width: 120px; }
 .table--admin th:nth-child(4), .table--admin td:nth-child(4){ width: 120px; }
 .table--admin th:nth-child(5), .table--admin td:nth-child(5){ width: 160px; }
-.table--admin th:nth-child(6), .table--admin td:nth-child(6){ width: 260px; }
+.table--admin th:nth-child(6), .table--admin td:nth-child(6){ width: 280px; }
 
+/* Tablet/móvil: el fixed layout suele empeorar */
 @media (max-width: 860px){
-  .table--admin{ min-width: 0; }
+  .table--admin{ table-layout: auto; }
 }
 
 /* Cats */
 .table--cats{
   table-layout: fixed;
-  min-width: 520px;
 }
 .table--cats td{ overflow:hidden; }
 .table--cats th:nth-child(2), .table--cats td:nth-child(2){ width: 220px; }
 .cats-actions form{ display:flex; justify-content:flex-start; }
 @media (max-width: 860px){
-  .table--cats{ min-width: 0; }
+  .table--cats{ table-layout: auto; }
 }
 
-/* =========================================================
-   Admin — Action panel + Details (pulido)
-========================================================= */
+/* Admin — Action panel + Details */
 .table--admin .admin-actionpanel{
   display:grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -367,47 +351,20 @@
 }
 
 .table--admin .admin-actionpanel > details,
-.table--admin .admin-actionpanel > form{
-  min-width:0;
-}
+.table--admin .admin-actionpanel > form{ min-width:0; }
 
+.table--admin details.admin-details{ border: 0; background: transparent; }
+
+/* Botones compactos */
 .table--admin .admin-actionpanel .btn{
   width: 100%;
   padding: 9px 10px;
   border-radius: 12px;
   font-size: 13px;
   min-height: 40px;
-
-  /* Estilo consistente (menos “gris pesado”) */
-  background: rgba(2,132,199,.06);
-  border: 1px solid rgba(2,132,199,.16);
-  color: var(--c-primary-3);
-  font-weight: 950;
-}
-.table--admin .admin-actionpanel .btn:hover{
-  background: rgba(2,132,199,.10);
-  border-color: rgba(2,132,199,.24);
 }
 
-.table--admin .admin-actionpanel .btn--danger{
-  background: var(--c-error);
-  border-color: transparent;
-  color: #fff;
-}
-.table--admin .admin-actionpanel .btn--danger:hover{
-  background: #b91c1c;
-}
-
-.table--admin details.admin-details{
-  border: 0;
-  background: transparent;
-  overflow: visible;
-}
-
-/* Cuando abre: ocupa todo el ancho y se vuelve un panel claro */
-.table--admin details.admin-details[open]{
-  grid-column: 1 / -1;
-}
+.table--admin details.admin-details[open]{ grid-column: 1 / -1; }
 .table--admin details.admin-details[open] > form{
   position: relative;
   margin-top: 10px;
@@ -418,7 +375,6 @@
   box-shadow: 0 18px 60px rgba(15,23,42,.08);
 }
 
-/* Título del panel sin tocar el HTML */
 .table--admin details.admin-details[open] > form::before{
   content: "Editar usuario";
   display: block;
@@ -429,22 +385,11 @@
   margin-bottom: 10px;
   text-transform: uppercase;
 }
-
-/* El segundo details suele ser Reset */
 .table--admin details.admin-details:nth-of-type(2)[open] > form::before{
   content: "Reset contraseña";
 }
 
-.table--admin details.admin-details[open] > form .label{
-  font-size: 12px;
-}
-.table--admin details.admin-details[open] > form .input{
-  border-radius: 14px;
-  padding: 10px 12px;
-  width: 100%;
-}
-
-/* Switches: caja suave y alineada */
+/* Switches */
 .table--admin details.admin-details[open] .admin-switches{
   margin-top: 8px;
   padding: 10px 12px;
@@ -461,14 +406,56 @@
   border-radius: 14px;
 }
 
-/* Eliminar en ancho completo (último form del panel) */
-.table--admin .admin-actionpanel form:last-child{
-  grid-column: 1 / -1;
-}
+/* Eliminar en ancho completo (desktop) */
+.table--admin .admin-actionpanel form:last-child{ grid-column: 1 / -1; }
 
-/* Mobile: acciones a 1 columna */
+/* Mobile: panel a 1 columna */
 @media (max-width: 980px){
   .table--admin .admin-actionpanel{ grid-template-columns: 1fr; }
   .table--admin details.admin-details[open]{ grid-column: auto; }
   .table--admin .admin-actionpanel form:last-child{ grid-column: auto; }
+}
+
+/* ==========================================================================
+   FIX — Admin botones en pantallas angostas
+   - Permite wrap real de textos y evita recortes.
+   ========================================================================== */
+
+/* La celda Acciones no debe recortar (si no, se “muerde” el botón) */
+.table--admin td:nth-child(6){
+  overflow: visible;
+}
+
+/* Pantallas angostas: 1 columna + wrap legible */
+@media (max-width: 860px){
+  .table--admin .admin-actionpanel{
+    grid-template-columns: 1fr;
+  }
+
+  .table--admin .admin-actionpanel .btn{
+    white-space: normal;
+    overflow-wrap: anywhere;
+    word-break: normal;
+    line-height: 1.15;
+
+    font-size: 12.5px;
+    padding: 9px 10px;
+
+    justify-content: flex-start;
+    text-align: left;
+  }
+
+  .table--admin .admin-actionpanel .btn--danger{
+    justify-content: center;
+    text-align: center;
+  }
+}
+
+/* Móviles muy angostos */
+@media (max-width: 420px){
+  .table--admin .admin-actionpanel{ gap: 8px; }
+  .table--admin .admin-actionpanel .btn{
+    font-size: 12px;
+    padding: 8px 10px;
+  }
 }

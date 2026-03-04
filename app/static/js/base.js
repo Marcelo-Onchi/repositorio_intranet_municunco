@@ -1,9 +1,8 @@
-// base.js — UI helpers (Municunco)
+// base.js — helpers UI (Municunco)
 // - Toasts (cerrar + autocerrar)
-// - Modal preview
+// - Modal preview (tamaños + resize + atajos)
 // - Dropzone
-// - Confirm modal PRO
-// Nota: el menú activo lo marca el servidor (Jinja) para evitar duplicados.
+// - Confirm modal
 
 (function () {
   "use strict";
@@ -34,32 +33,79 @@
     });
 
     document.querySelectorAll(".toast,[data-toast]").forEach((toast) => {
-      const ms = 4500;
-      window.setTimeout(() => removeToast(toast), ms);
+      window.setTimeout(() => removeToast(toast), 4500);
     });
   }
 
   // =========================
-  // Modal preview
+  // Modal preview (resizable + tamaños)
   // =========================
   function initModalPreview() {
     const modal = document.querySelector("#previewModal");
     if (!modal) return;
 
+    const panel = modal.querySelector(".modal__panel");
+    const head = modal.querySelector(".modal__head");
     const titleEl = modal.querySelector(".modal__title");
     const frame = modal.querySelector("iframe");
+
+    if (!panel || !head || !frame) return;
+
+    const KEY = "municunco_preview_size";
+    const SIZES = ["sm", "md", "lg", "xl"];
+
+    const getSavedSize = () => {
+      try {
+        return localStorage.getItem(KEY) || "md";
+      } catch (_) {
+        return "md";
+      }
+    };
+
+    const applySize = (size) => {
+      const s = SIZES.includes(size) ? size : "md";
+      SIZES.forEach((x) => panel.classList.remove(`is-${x}`));
+      panel.classList.add(`is-${s}`);
+
+      try {
+        localStorage.setItem(KEY, s);
+      } catch (_) {}
+
+      head.querySelectorAll("[data-preview-size]").forEach((b) => {
+        const pressed = b.getAttribute("data-preview-size") === s ? "true" : "false";
+        b.setAttribute("aria-pressed", pressed);
+      });
+    };
+
+    // Inserta la toolbar una sola vez (sin tocar HTML)
+    if (!head.querySelector(".modal__tools")) {
+      const tools = document.createElement("div");
+      tools.className = "modal__tools";
+      tools.innerHTML = `
+        <button class="iconbtn" type="button" data-preview-size="sm" aria-pressed="false" aria-label="Vista previa: tamaño chico">−</button>
+        <button class="iconbtn" type="button" data-preview-size="md" aria-pressed="false" aria-label="Vista previa: tamaño normal">1:1</button>
+        <button class="iconbtn" type="button" data-preview-size="lg" aria-pressed="false" aria-label="Vista previa: tamaño grande">+</button>
+        <button class="iconbtn" type="button" data-preview-size="xl" aria-pressed="false" aria-label="Vista previa: pantalla completa">⛶</button>
+      `;
+
+      const closeBtn = head.querySelector("[data-modal-close]");
+      head.insertBefore(tools, closeBtn);
+    }
 
     const open = (url, title) => {
       modal.classList.add("is-open");
       modal.setAttribute("aria-hidden", "false");
+
       if (titleEl) titleEl.textContent = title || "Vista previa";
-      if (frame) frame.src = url || "about:blank";
+      frame.src = url || "about:blank";
+
+      applySize(getSavedSize());
     };
 
     const close = () => {
       modal.classList.remove("is-open");
       modal.setAttribute("aria-hidden", "true");
-      if (frame) frame.src = "about:blank";
+      frame.src = "about:blank";
     };
 
     document.addEventListener("click", (e) => {
@@ -71,19 +117,38 @@
         return;
       }
 
+      const sizeBtn = e.target.closest("[data-preview-size]");
+      if (sizeBtn && modal.classList.contains("is-open")) {
+        applySize(sizeBtn.getAttribute("data-preview-size"));
+        return;
+      }
+
       const closeBtn = e.target.closest("[data-modal-close]");
       if (closeBtn) {
         close();
         return;
       }
 
-      // Clic fuera (backdrop)
       if (e.target === modal) close();
     });
 
-    // ESC
+    // Atajos: ESC cierra, + agranda, - achica
     document.addEventListener("keydown", (e) => {
-      if (e.key === "Escape" && modal.classList.contains("is-open")) close();
+      if (!modal.classList.contains("is-open")) return;
+
+      if (e.key === "Escape") close();
+
+      if (e.key === "+" || e.key === "=") {
+        const cur = getSavedSize();
+        const idx = Math.min(SIZES.indexOf(cur) + 1, SIZES.length - 1);
+        applySize(SIZES[idx]);
+      }
+
+      if (e.key === "-") {
+        const cur = getSavedSize();
+        const idx = Math.max(SIZES.indexOf(cur) - 1, 0);
+        applySize(SIZES[idx]);
+      }
     });
   }
 
@@ -119,13 +184,12 @@
       const files = ev.dataTransfer && ev.dataTransfer.files ? ev.dataTransfer.files : null;
       if (!files || files.length === 0) return;
 
-      // Intento seguro: DataTransfer (mejor compatibilidad)
       try {
         const dt = new DataTransfer();
         for (const f of files) dt.items.add(f);
         input.files = dt.files;
       } catch (_) {
-        // Si el navegador no lo permite, igual actualizamos contador (no romper)
+        // Navegadores restrictivos: no romper UX.
       }
 
       updateCount();
@@ -136,14 +200,14 @@
   }
 
   // =========================
-  // Confirm modal PRO
+  // Confirm modal
   // =========================
   function initConfirmModal() {
     const modal = document.querySelector("#confirmModal");
     if (!modal) return;
 
     const titleEl = modal.querySelector("[data-confirm-title]");
-    const textEl = modal.querySelector("[data-confirm-text]"); // ✅ coincide con tu HTML
+    const textEl = modal.querySelector("[data-confirm-text]");
     const okBtn = modal.querySelector("[data-confirm-ok]");
     const cancelBtn = modal.querySelectorAll("[data-confirm-cancel]");
 
@@ -168,7 +232,6 @@
       if (!btn) return;
 
       e.preventDefault();
-
       pendingForm = btn.closest("form");
 
       open({
