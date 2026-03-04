@@ -1,8 +1,8 @@
-/* =========================================================
+/* =========================================
    PAGES.CSS — Municunco (2026)
-   - Dashboard / Docs / Upload / Admin
-   - Mantiene cada página aislada, base.css queda “global”
-========================================================= */
+   - Dashboard / Admin / Docs / Upload
+   - Responsive real (sin textos “en vertical”)
+========================================= */
 
 /* =========================================================
    Dashboard
@@ -32,8 +32,15 @@
   text-overflow:ellipsis;
 }
 
+@media (max-width: 1024px){
+  .stats{ grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 720px){
+  .stats{ grid-template-columns: 1fr; }
+}
+
 /* =========================================================
-   Docs — toolbar / tabla
+   Toolbar (Docs)
 ========================================================= */
 .toolbar{
   display:grid;
@@ -42,6 +49,7 @@
   align-items:start;
   margin: 10px 0 14px;
 }
+
 .toolbar__left{
   display:grid;
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
@@ -49,13 +57,13 @@
   align-items:start;
   min-width:0;
 }
+
 .toolbar__field--search{ min-width: 260px; }
 .toolbar__field--cat{ min-width: 220px; }
 .toolbar__field--date{ min-width: 160px; }
 .toolbar__field--due{ min-width: 210px; }
 .toolbar__field--sort{ min-width: 220px; }
 
-/* Botones con espacio (Aplicar / Subir) */
 .toolbar__right{
   display:flex;
   gap: 12px;
@@ -76,21 +84,26 @@
   .toolbar__right .btn{ min-width: 120px; }
 }
 
-/* Tabla docs (desktop) */
+/* =========================================================
+   Docs table (Desktop)
+========================================================= */
 .table--docs{
   table-layout: fixed;
   min-width: 1040px;
 }
+
 .table--docs th{
   overflow:hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
 .table--docs th:nth-child(2), .table--docs td:nth-child(2){ width: 170px; }
 .table--docs th:nth-child(3), .table--docs td:nth-child(3){ width: 170px; }
 .table--docs th:nth-child(4), .table--docs td:nth-child(4){ width: 170px; }
 .table--docs th:nth-child(5), .table--docs td:nth-child(5){ width: 110px; }
 .table--docs th:nth-child(6), .table--docs td:nth-child(6){ width: 260px; }
+
 .table--docs td{ overflow:hidden; }
 
 .table--docs .file-pill{
@@ -154,7 +167,10 @@
 .table--docs .actions form{ width:100%; }
 .table--docs .actions form button{ width:100%; }
 
-/* Docs “stack cards” en mobile */
+/* =========================================================
+   Docs stack (Mobile)
+   FIX: evita “texto en vertical” (label arriba + valor abajo)
+========================================================= */
 @media (max-width: 860px){
   .table--docs{ min-width: 0; table-layout: auto; }
   .table--docs thead{ display:none; }
@@ -180,11 +196,12 @@
   }
   .table--docs td:first-child{ margin-top: 0; }
 
+  /* Cada “celda” se vuelve una mini-card */
   .table--docs td[data-label]{
-    display:grid;
-    grid-template-columns: 110px minmax(0, 1fr);
-    gap: 10px;
-    align-items:center;
+    display:flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
 
     padding: 10px 12px;
     border: 1px solid rgba(226,232,240,.95);
@@ -199,7 +216,17 @@
     color: var(--c-text-3);
     letter-spacing: .06em;
     text-transform: uppercase;
-    white-space: nowrap;
+    line-height: 1.15;
+  }
+
+  /* Valores: no romper en letras */
+  .table--docs td[data-label] > *{
+    max-width: 100%;
+    min-width: 0;
+  }
+  .table--docs .badge,
+  .table--docs .file-pill{
+    max-width: 100%;
   }
 
   .table--docs .td-actions{
@@ -214,10 +241,17 @@
     background: rgba(2,132,199,.04);
     border-radius: 16px;
   }
+
+  /* Si tienes fechas como texto plano, mantenlas legibles */
+  .table--docs .date-text{
+    white-space: nowrap;
+  }
+
+  .table--docs .due-wrap{ justify-content:flex-start; }
 }
 
 /* =========================================================
-   Upload — Dropzone
+   Upload (Dropzone)
 ========================================================= */
 .dropzone{
   border: 2px dashed rgba(2,132,199,.45);
@@ -244,8 +278,15 @@
 .dropzone__right{ display:flex; align-items:center; gap: 10px; }
 .dropzone__count{ color: var(--c-text-2); font-size: 13px; font-weight: 900; }
 
+@media (max-width: 520px){
+  .dropzone{
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
+
 /* =========================================================
-   Admin
+   Admin styles
 ========================================================= */
 .admin-card{
   background: linear-gradient(180deg, #fff 0%, rgba(241,245,249,.55) 100%);
@@ -265,6 +306,11 @@
   align-items: center;
   font-weight: 900;
   color: var(--c-text-2);
+}
+.admin-check input[type="checkbox"]{
+  width: 16px;
+  height: 16px;
+  accent-color: var(--c-primary);
 }
 
 .admin-actions-row{
@@ -293,6 +339,10 @@
 .table--admin th:nth-child(5), .table--admin td:nth-child(5){ width: 160px; }
 .table--admin th:nth-child(6), .table--admin td:nth-child(6){ width: 260px; }
 
+@media (max-width: 860px){
+  .table--admin{ min-width: 0; }
+}
+
 /* Cats */
 .table--cats{
   table-layout: fixed;
@@ -301,15 +351,13 @@
 .table--cats td{ overflow:hidden; }
 .table--cats th:nth-child(2), .table--cats td:nth-child(2){ width: 220px; }
 .cats-actions form{ display:flex; justify-content:flex-start; }
-
-/* =========================================================
-   Admin — Action panel + Details (pro)
-========================================================= */
-.table--admin td:last-child{
-  padding-top: 14px;
-  padding-bottom: 14px;
+@media (max-width: 860px){
+  .table--cats{ min-width: 0; }
 }
 
+/* =========================================================
+   Admin — Action panel + Details (pulido)
+========================================================= */
 .table--admin .admin-actionpanel{
   display:grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -317,12 +365,12 @@
   align-items: start;
   justify-items: stretch;
 }
+
 .table--admin .admin-actionpanel > details,
 .table--admin .admin-actionpanel > form{
   min-width:0;
 }
 
-/* Botones (default admin) */
 .table--admin .admin-actionpanel .btn{
   width: 100%;
   padding: 9px 10px;
@@ -330,6 +378,7 @@
   font-size: 13px;
   min-height: 40px;
 
+  /* Estilo consistente (menos “gris pesado”) */
   background: rgba(2,132,199,.06);
   border: 1px solid rgba(2,132,199,.16);
   color: var(--c-primary-3);
@@ -349,29 +398,19 @@
   background: #b91c1c;
 }
 
-/* details */
 .table--admin details.admin-details{
   border: 0;
   background: transparent;
   overflow: visible;
 }
 
-.table--admin details.admin-details > summary.btn{
-  background: rgba(15,23,42,.04);
-  border-color: rgba(15,23,42,.10);
-  color: var(--c-text-2);
+/* Cuando abre: ocupa todo el ancho y se vuelve un panel claro */
+.table--admin details.admin-details[open]{
+  grid-column: 1 / -1;
 }
-.table--admin details.admin-details > summary.btn:hover{
-  background: rgba(15,23,42,.07);
-  border-color: rgba(15,23,42,.16);
-}
-
-/* Cuando abre: ocupa todo el ancho y se ve “panel” */
-.table--admin details.admin-details[open]{ grid-column: 1 / -1; }
-
 .table--admin details.admin-details[open] > form{
-  margin-top: 10px;
   position: relative;
+  margin-top: 10px;
   padding: 14px;
   border-radius: 16px;
   background: linear-gradient(180deg, #fff 0%, rgba(241,245,249,.65) 100%);
@@ -379,7 +418,7 @@
   box-shadow: 0 18px 60px rgba(15,23,42,.08);
 }
 
-/* Título visual sin tocar HTML */
+/* Título del panel sin tocar el HTML */
 .table--admin details.admin-details[open] > form::before{
   content: "Editar usuario";
   display: block;
@@ -390,65 +429,46 @@
   margin-bottom: 10px;
   text-transform: uppercase;
 }
+
+/* El segundo details suele ser Reset */
 .table--admin details.admin-details:nth-of-type(2)[open] > form::before{
   content: "Reset contraseña";
 }
 
-.table--admin details.admin-details[open] > form .label{ font-size: 12px; }
+.table--admin details.admin-details[open] > form .label{
+  font-size: 12px;
+}
 .table--admin details.admin-details[open] > form .input{
   border-radius: 14px;
   padding: 10px 12px;
+  width: 100%;
 }
 
-/* Checks alineados */
+/* Switches: caja suave y alineada */
 .table--admin details.admin-details[open] .admin-switches{
   margin-top: 8px;
   padding: 10px 12px;
   border-radius: 14px;
   background: rgba(2,132,199,.04);
   border: 1px solid rgba(2,132,199,.14);
-}
-.table--admin details.admin-details[open] .admin-check{ gap: 10px; }
-.table--admin details.admin-details[open] .admin-check input[type="checkbox"]{
-  width: 16px;
-  height: 16px;
-  accent-color: var(--c-primary);
+  gap: 12px;
 }
 
-/* Guardar/Actualizar full ancho */
 .table--admin details.admin-details[open] > form .btn{
+  width: 100%;
   margin-top: 10px;
   min-height: 42px;
   border-radius: 14px;
-  width: 100%;
 }
 
-/* Eliminar full-width */
-.table--admin .admin-actionpanel form:last-child{ grid-column: 1 / -1; }
-
-/* =========================================================
-   Responsive — Admin tables + actions
-========================================================= */
-@media (max-width: 1200px){
-  .table--admin{ min-width: 920px; }
+/* Eliminar en ancho completo (último form del panel) */
+.table--admin .admin-actionpanel form:last-child{
+  grid-column: 1 / -1;
 }
+
+/* Mobile: acciones a 1 columna */
 @media (max-width: 980px){
   .table--admin .admin-actionpanel{ grid-template-columns: 1fr; }
   .table--admin details.admin-details[open]{ grid-column: auto; }
   .table--admin .admin-actionpanel form:last-child{ grid-column: auto; }
-  .table--admin details.admin-details[open] > form{ padding: 12px; }
-}
-@media (max-width: 860px){
-  .table--admin{ min-width: 0; }
-  .table--cats{ min-width: 0; }
-}
-
-/* =========================================================
-   Responsive — Dashboard stats
-========================================================= */
-@media (max-width: 980px){
-  .stats{ grid-template-columns: repeat(2, minmax(0, 1fr)); }
-}
-@media (max-width: 720px){
-  .stats{ grid-template-columns: 1fr; }
 }

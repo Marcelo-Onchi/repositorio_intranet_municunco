@@ -6,9 +6,6 @@
     <title>{% block title %}Repositorio Municunco{% endblock %}</title>
 
     {% set v = config.get("STATIC_VERSION", "1") %}
-
-    <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
-
     <link rel="stylesheet" href="{{ url_for('static', filename='css/base.css', v=v) }}" />
     <link rel="stylesheet" href="{{ url_for('static', filename='css/pages.css', v=v) }}" />
     <script defer src="{{ url_for('static', filename='js/base.js', v=v) }}"></script>
@@ -16,7 +13,7 @@
     {% block extra_head %}{% endblock %}
   </head>
 
-  <body class="app">
+  <body>
     <a class="skip-link" href="#main">Saltar al contenido</a>
 
     <header class="topbar">
