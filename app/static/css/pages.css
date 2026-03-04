@@ -1,8 +1,7 @@
 /* =========================================
    PAGES.CSS — Municunco (2026) — FIX PRO
-   - Toolbar: botones alineados (no quedan abajo)
-   - Docs/Admin: tablas estables + truncados reales
-   - Mobile: stack limpio
+   - Admin: details forms en panel bonito
+   - Docs: botones toolbar separados
 ========================================= */
 
 /* =========================================================
@@ -34,7 +33,7 @@
 }
 
 /* =========================================================
-   Toolbar (Docs) — FIX: botones no quedan abajo
+   Toolbar (Docs)
 ========================================================= */
 .toolbar{
   display:grid;
@@ -52,31 +51,35 @@
   min-width:0;
 }
 
-/* tamaños sugeridos (sin inline styles) */
 .toolbar__field--search{ min-width: 260px; }
 .toolbar__field--cat{ min-width: 220px; }
 .toolbar__field--date{ min-width: 160px; }
 .toolbar__field--due{ min-width: 210px; }
 .toolbar__field--sort{ min-width: 220px; }
 
+/* ✅ FIX: botones Aplicar/Subir con espacio + wrap */
 .toolbar__right{
   display:flex;
-  gap: 10px;
+  gap: 12px;
+  row-gap: 10px;
+  flex-wrap: wrap;
   justify-content:flex-end;
   align-items:center;
-  margin-top: 21px; /* empata visual con inputs bajo label */
+  margin-top: 21px;
+}
+.toolbar__right .btn{
+  white-space: nowrap;
+  min-width: 110px;
 }
 
 @media (max-width: 860px){
   .toolbar{ grid-template-columns: 1fr; }
-  .toolbar__right{
-    justify-content:flex-start;
-    margin-top: 0;
-  }
+  .toolbar__right{ justify-content:flex-start; margin-top: 0; }
+  .toolbar__right .btn{ min-width: 120px; }
 }
 
 /* =========================================================
-   Docs table (DESKTOP estable)
+   Docs table (DESKTOP)
 ========================================================= */
 .table--docs{
   table-layout: fixed;
@@ -97,7 +100,6 @@
 
 .table--docs td{ overflow:hidden; }
 
-/* Documento pill */
 .table--docs .file-pill{
   display:flex;
   align-items:center;
@@ -140,11 +142,11 @@
   white-space: nowrap;
 }
 
-/* Acciones (Docs) */
+/* Acciones docs */
 .table--docs .actions{
   display:flex;
   flex-direction:column;
-  gap: 8px;
+  gap: 10px;              /* ✅ un poco más aire */
   align-items:stretch;
 }
 .table--docs .actions > *{ width: 100%; }
@@ -163,11 +165,7 @@
    Docs stack (MOBILE)
 ========================================================= */
 @media (max-width: 860px){
-  .table--docs{
-    min-width: 0;
-    table-layout: auto;
-  }
-
+  .table--docs{ min-width: 0; table-layout: auto; }
   .table--docs thead{ display:none; }
   .table--docs, .table--docs tbody, .table--docs tr, .table--docs td{
     display:block;
@@ -230,28 +228,6 @@
 }
 
 /* =========================================================
-   Calendar table
-========================================================= */
-.table--calendar{
-  width:100%;
-  table-layout: fixed;
-}
-.table--calendar th:nth-child(1), .table--calendar td:nth-child(1){ width: 220px; }
-.table--calendar th:nth-child(2), .table--calendar td:nth-child(2){ width: auto; }
-.table--calendar th:nth-child(3), .table--calendar td:nth-child(3){ width: 120px; }
-
-.table--calendar td:nth-child(2){ overflow:hidden; }
-.table--calendar td:nth-child(2) .cal-title{
-  display:block;
-  min-width:0;
-  max-width:100%;
-  white-space:nowrap;
-  overflow:hidden;
-  text-overflow:ellipsis;
-  font-weight: 900;
-}
-
-/* =========================================================
    Upload (Dropzone)
 ========================================================= */
 .dropzone{
@@ -280,7 +256,7 @@
 .dropzone__count{ color: var(--c-text-2); font-size: 13px; font-weight: 900; }
 
 /* =========================================================
-   Admin styles (estables)
+   Admin styles
 ========================================================= */
 .admin-card{
   background: linear-gradient(180deg, #fff 0%, rgba(241,245,249,.55) 100%);
@@ -292,7 +268,8 @@
   flex-wrap: wrap;
   align-items: center;
 }
-.admin-switches--inner{ margin-top: 4px; }
+.admin-switches--inner{ margin-top: 8px; }
+
 .admin-check{
   display:flex;
   gap: 8px;
@@ -307,31 +284,14 @@
   margin-top: 10px;
 }
 
-.admin-actionpanel{
-  display:grid;
-  gap: 8px;
-  align-items:start;
+.form--compact{
+  gap: 10px;
+  padding: 0;            /* ✅ en admin la usamos como panel, padding lo pone el contenedor */
+  margin-top: 0;
 }
-
-.admin-details{
-  border: 1px solid rgba(226,232,240,.95);
-  border-radius: 14px;
-  background: rgba(241,245,249,.45);
-  overflow: hidden;
-}
-.admin-details > summary{
-  list-style: none;
-  cursor: pointer;
-}
-.admin-details > summary::-webkit-details-marker{ display:none; }
-.admin-details > summary.btn{
-  width: 100%;
-  justify-content: flex-start;
-}
-
-.form--compact{ gap: 10px; padding: 10px; margin-top: 0; }
 .form--compact .input{ padding: 10px 12px; }
 
+/* Admin table */
 .table--admin{
   table-layout: fixed;
   min-width: 980px;
@@ -344,55 +304,41 @@
 .table--admin th:nth-child(5), .table--admin td:nth-child(5){ width: 160px; }
 .table--admin th:nth-child(6), .table--admin td:nth-child(6){ width: 260px; }
 
+@media (max-width: 860px){
+  .table--admin{ min-width: 0; }
+}
+
+/* Cats */
 .table--cats{
   table-layout: fixed;
   min-width: 520px;
 }
 .table--cats td{ overflow:hidden; }
 .table--cats th:nth-child(2), .table--cats td:nth-child(2){ width: 220px; }
-
 .cats-actions form{ display:flex; justify-content:flex-start; }
 
 @media (max-width: 860px){
-  .table--admin, .table--cats{ min-width: 0; }
+  .table--cats{ min-width: 0; }
 }
 
-/* Preview modal: iframe pegado */
-#previewModal .modal__body{ padding: 0; }
-
-/* Responsive stats */
-@media (max-width: 980px){
-  .stats{ grid-template-columns: repeat(2, minmax(0, 1fr)); }
-}
-@media (max-width: 720px){
-  .stats{ grid-template-columns: 1fr; }
-}
 /* =========================================================
-   Admin — FIX Acciones (botones compactos y bonitos)
-   - Evita "pastillas gigantes" por grid stretch
-   - Layout 2 columnas + Eliminar full width
+   ✅ Admin — FIX Acciones + details forms BONITOS
+   (Esto es lo que te arregla Editar/Reset “feo”)
 ========================================================= */
-
-.table--admin td:last-child{ padding-right: 16px; }
-
-/* Panel acciones: 2 columnas compactas */
 .table--admin .admin-actionpanel{
   display:grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 8px;
-
-  /* ✅ clave: no estirar visual feo */
+  gap: 10px;
   align-items: start;
   justify-items: stretch;
 }
 
-/* Que cada bloque no empuje */
 .table--admin .admin-actionpanel > details,
 .table--admin .admin-actionpanel > form{
   min-width:0;
 }
 
-/* Botones dentro del panel: compactos */
+/* botones dentro */
 .table--admin .admin-actionpanel .btn{
   width: 100%;
   padding: 9px 10px;
@@ -401,7 +347,7 @@
   min-height: 40px;
 }
 
-/* Ghost neutro SOLO en Admin (menos azul, más pro) */
+/* ghost más neutro en admin */
 .table--admin .btn--ghost{
   background: rgba(15,23,42,.04);
   border-color: rgba(15,23,42,.10);
@@ -412,30 +358,66 @@
   border-color: rgba(15,23,42,.16);
 }
 
-/* Details: el summary se comporta como botón real */
-.table--admin .admin-details > summary.btn{
-  width:100%;
-  justify-content:flex-start;
+/* details: no rompe layout */
+.table--admin details.admin-details{
+  border: 0;
+  background: transparent;
+  overflow: visible;
 }
 
-/* Forms: el botón ocupa bien el espacio */
-.table--admin .admin-actionpanel form{ width:100%; }
-.table--admin .admin-actionpanel form button{ width:100%; }
+/* cuando abre: el formulario se vuelve PANEL y ocupa TODO */
+.table--admin details.admin-details[open]{
+  grid-column: 1 / -1;   /* ✅ ocupa todo el ancho */
+}
 
-/* ✅ Eliminar: que destaque y ocupe toda la fila */
+.table--admin details.admin-details[open] > form{
+  margin-top: 10px;
+  padding: 12px;
+  border-radius: 16px;
+  background: #fff;
+  border: 1px solid rgba(226,232,240,.95);
+  box-shadow: 0 18px 60px rgba(15,23,42,.08);
+}
+
+/* inputs full y bien */
+.table--admin details.admin-details[open] > form .input{
+  width: 100%;
+}
+
+/* el botón guardar/actualizar full */
+.table--admin details.admin-details[open] > form .btn{
+  width: 100%;
+}
+
+/* separar mejor switches */
+.table--admin details.admin-details[open] .admin-switches{
+  gap: 12px;
+}
+
+/* Eliminar en ancho completo */
 .table--admin .admin-actionpanel form:last-child{
   grid-column: 1 / -1;
 }
-.table--admin .admin-actionpanel form:last-child .btn{
-  min-height: 42px;
-}
 
-/* En pantallas más angostas: 1 columna */
+/* Mobile: acciones a 1 columna */
 @media (max-width: 980px){
   .table--admin .admin-actionpanel{
     grid-template-columns: 1fr;
   }
+  .table--admin details.admin-details[open]{
+    grid-column: auto;
+  }
   .table--admin .admin-actionpanel form:last-child{
     grid-column: auto;
   }
+}
+
+/* =========================================================
+   Responsive stats
+========================================================= */
+@media (max-width: 980px){
+  .stats{ grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 720px){
+  .stats{ grid-template-columns: 1fr; }
 }

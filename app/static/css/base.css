@@ -101,11 +101,7 @@ img{ max-width:100%; height:auto; }
   min-width:0;
 }
 .dot{ width:10px; height:10px; border-radius:999px; background:rgba(255,255,255,.88); }
-.pill__email{
-  font-weight:800;
-  font-size:13px;
-  min-width:0;
-}
+.pill__email{ font-weight:800; font-size:13px; min-width:0; }
 .pill__tag{
   font-size:11px;
   font-weight:950;
@@ -129,7 +125,7 @@ img{ max-width:100%; height:auto; }
 
 .sidebar{ position:sticky; top:14px; min-width:0; }
 
-/* ✅ FIX: .content neutro para evitar doble "card" (card dentro de card) */
+/* ✅ neutro: evita "card dentro de card" */
 .content{
   background: transparent;
   border: none;
@@ -524,12 +520,10 @@ img{ max-width:100%; height:auto; }
 /* =========================
    FIX global: evitar overflow por flex/grid
 ========================= */
-.layout, .content, .card, .form__row, .table-wrap, .table, .actions, .pill{
-  min-width: 0;
-}
+.layout, .content, .card, .form__row, .table-wrap, .table, .actions, .pill{ min-width: 0; }
 .table td, .table th{ min-width: 0; }
 
-/* details/summary con clase btn: evitar rarezas */
+/* details/summary con clase btn */
 summary.btn{ list-style: none; }
 summary.btn::-webkit-details-marker{ display:none; }
 

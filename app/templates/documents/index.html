@@ -14,7 +14,6 @@
   <div class="card">
     <form method="GET" action="{{ url_for('documents.index') }}" class="toolbar">
       <div class="toolbar__left">
-
         <div class="form__row toolbar__field--search">
           <label class="label" for="q">Buscar</label>
           <input class="input" id="q" name="q" value="{{ q }}" placeholder="Ej: resolución, contrato, acta..." />
@@ -59,7 +58,6 @@
             <option value="due_desc" {% if sort == "due_desc" %}selected{% endif %}>Fecha límite (más lejana)</option>
           </select>
         </div>
-
       </div>
 
       <div class="toolbar__right">
