@@ -1,64 +1,13 @@
 /* =========================================
-   PAGES.CSS — Dashboard / Admin / Docs / Upload / Calendar
-   Municunco (2026)
-   Objetivo:
-   - Docs: no “romper” tabla, pill bonito, acciones pro
-   - Sin scroll en desktop grande
-   - En pantallas chicas: scroll solo si es inevitable
+   PAGES.CSS — Municunco (2026) — FIX PRO
+   - Toolbar: botones alineados (no quedan abajo)
+   - Docs/Admin: tablas estables + truncados reales
+   - Mobile: stack limpio
 ========================================= */
 
-/* ---------------------------------------------------------
-   Helpers / Base
---------------------------------------------------------- */
-.table-wrap{
-  width:100%;
-  overflow-x: hidden; /* ✅ desktop grande: sin scroll */
-  -webkit-overflow-scrolling: touch;
-}
-
-.table td, .table th{ min-width: 0; }
-.table td{ overflow:hidden; }
-
-/* ---------------------------------------------------------
-   Badges (global)
---------------------------------------------------------- */
-.badge{
-  display:inline-flex;
-  align-items:center;
-  justify-content:center;
-  gap: 6px;
-
-  padding: 6px 10px;
-  border-radius: 999px;
-
-  font-weight: 900;
-  font-size: 12px;
-  line-height: 1;
-  white-space: nowrap;
-
-  border: 1px solid rgba(0,0,0,.08);
-  background: rgba(15,23,42,.04);
-  color: var(--c-text-2);
-}
-.badge--ok{
-  background: rgba(22,163,74,.10);
-  border-color: rgba(22,163,74,.30);
-  color:#15803d;
-}
-.badge--warn{
-  background: rgba(245,158,11,.12);
-  border-color: rgba(245,158,11,.30);
-  color:#b45309;
-}
-.badge--danger{
-  background: rgba(220,38,38,.10);
-  border-color: rgba(220,38,38,.30);
-  color:#b91c1c;
-}
-
-/* ---------------------------------------------------------
-   DASHBOARD
---------------------------------------------------------- */
+/* =========================================================
+   Dashboard
+========================================================= */
 .stats{
   display:grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -72,11 +21,7 @@
   min-width: 0;
   overflow:hidden;
 }
-.stat__label{
-  font-size: 12px;
-  font-weight: 900;
-  color: var(--c-text-3);
-}
+.stat__label{ font-size: 12px; font-weight: 900; color: var(--c-text-3); }
 .stat__value{
   font-size: 22px;
   font-weight: 950;
@@ -88,39 +33,54 @@
   text-overflow:ellipsis;
 }
 
-/* ---------------------------------------------------------
-   DOCS / EXPLORAR
---------------------------------------------------------- */
+/* =========================================================
+   Toolbar (Docs) — FIX: botones no quedan abajo
+========================================================= */
 .toolbar{
-  display:flex;
-  align-items:flex-end;
-  justify-content:space-between;
+  display:grid;
+  grid-template-columns: 1fr auto;
   gap: 12px;
-  flex-wrap: wrap;
+  align-items:start;
   margin: 10px 0 14px;
 }
+
 .toolbar__left{
-  display:flex;
+  display:grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
   gap: 10px;
-  flex-wrap: wrap;
-  align-items:flex-end;
+  align-items:start;
   min-width:0;
 }
+
+/* tamaños sugeridos (sin inline styles) */
+.toolbar__field--search{ min-width: 260px; }
+.toolbar__field--cat{ min-width: 220px; }
+.toolbar__field--date{ min-width: 160px; }
+.toolbar__field--due{ min-width: 210px; }
+.toolbar__field--sort{ min-width: 220px; }
+
 .toolbar__right{
   display:flex;
   gap: 10px;
-  flex-wrap: wrap;
-  align-items:flex-end;
+  justify-content:flex-end;
+  align-items:center;
+  margin-top: 21px; /* empata visual con inputs bajo label */
+}
+
+@media (max-width: 860px){
+  .toolbar{ grid-template-columns: 1fr; }
+  .toolbar__right{
+    justify-content:flex-start;
+    margin-top: 0;
+  }
 }
 
 /* =========================================================
-   TABLA DOCS (clave)
-   - Anchos “seguros” (más chicos) para que DOCUMENTO tenga espacio.
-   - Acciones siempre vertical, sin cortes.
+   Docs table (DESKTOP estable)
 ========================================================= */
 .table--docs{
-  width:100%;
   table-layout: fixed;
+  min-width: 1040px;
 }
 
 .table--docs th{
@@ -129,71 +89,27 @@
   white-space: nowrap;
 }
 
-/* Columnas fijas más compactas (antes eran muy grandes y mataban “Documento”) */
-.table--docs th:nth-child(6),
-.table--docs td:nth-child(6){ width: 240px; }   /* Acciones */
-.table--docs th:nth-child(5),
-.table--docs td:nth-child(5){ width: 84px; }    /* Tamaño */
-.table--docs th:nth-child(4),
-.table--docs td:nth-child(4){ width: 128px; }   /* Vence */
-.table--docs th:nth-child(3),
-.table--docs td:nth-child(3){ width: 132px; }   /* Subido */
-.table--docs th:nth-child(2),
-.table--docs td:nth-child(2){ width: 150px; }   /* Categoría */
-/* Documento absorbe el resto */
+.table--docs th:nth-child(2), .table--docs td:nth-child(2){ width: 170px; }
+.table--docs th:nth-child(3), .table--docs td:nth-child(3){ width: 170px; }
+.table--docs th:nth-child(4), .table--docs td:nth-child(4){ width: 170px; }
+.table--docs th:nth-child(5), .table--docs td:nth-child(5){ width: 110px; }
+.table--docs th:nth-child(6), .table--docs td:nth-child(6){ width: 260px; }
 
-/* ✅ Documento no se recorta (para que pill y meta respiren) */
-.table--docs td:nth-child(1){
-  overflow: visible !important;
-  vertical-align: top;
-}
+.table--docs td{ overflow:hidden; }
 
-/* Subido en 2 líneas máximo */
-.table--docs td:nth-child(3){
-  white-space: normal;
-  line-height: 1.25;
-}
-
-/* Vence centrado y sin recorte */
-.table--docs td:nth-child(4){
-  overflow: visible !important;
-  text-align:center;
-}
-.table--docs td:nth-child(4) .due-wrap{
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  padding: 2px 0;
-}
-
-/* Tamaño no parte */
-.table--docs td:nth-child(5){
-  white-space: nowrap;
-}
-
-/* Acciones: jamás recortar */
-.table--docs td:nth-child(6){
-  overflow: visible !important;
-  vertical-align: top;
-}
-
-/* ------------------------------
-   Pill PRO (Documento)
------------------------------- */
+/* Documento pill */
 .table--docs .file-pill{
   display:flex;
   align-items:center;
   gap: 10px;
-
   width: 100%;
   min-width: 0;
-  max-width: 100%;
 
   font-weight: 950;
   color: var(--c-primary-3);
 
-  padding: 7px 10px;
-  border-radius: 12px;
+  padding: 9px 12px;
+  border-radius: 14px;
   background: rgba(2,132,199,.06);
   border: 1px solid rgba(2,132,199,.16);
 }
@@ -203,51 +119,127 @@
   height: 22px;
   display:grid;
   place-items:center;
-
   border-radius: 10px;
   background: rgba(2,132,199,.10);
   border: 1px solid rgba(2,132,199,.18);
-
   font-size: 12px;
   line-height: 1;
 }
 .table--docs .file-pill__text{
-  min-width: 0;
-  overflow: hidden;
-  white-space: nowrap;
-  text-overflow: ellipsis;
+  min-width:0;
+  overflow:hidden;
+  white-space:nowrap;
+  text-overflow:ellipsis;
 }
 
-/* Meta bajo el pill */
-.file-meta{ margin-top: 6px; }
+.file-meta{
+  margin-top: 6px;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 
-/* Acciones docs: columna vertical */
+/* Acciones (Docs) */
 .table--docs .actions{
   display:flex;
   flex-direction:column;
   gap: 8px;
   align-items:stretch;
-  flex-wrap: nowrap;
 }
+.table--docs .actions > *{ width: 100%; }
 .table--docs .actions .btn{
-  width:100%;
-  max-width:100%;
+  width: 100%;
   white-space: nowrap;
   font-size: 13px;
-  padding: 9px 12px;
+  padding: 10px 12px;
   border-radius: 12px;
+  min-height: 40px;
+}
+.table--docs .actions form{ width:100%; }
+.table--docs .actions form button{ width:100%; }
+
+/* =========================================================
+   Docs stack (MOBILE)
+========================================================= */
+@media (max-width: 860px){
+  .table--docs{
+    min-width: 0;
+    table-layout: auto;
+  }
+
+  .table--docs thead{ display:none; }
+  .table--docs, .table--docs tbody, .table--docs tr, .table--docs td{
+    display:block;
+    width:100%;
+  }
+
+  .table--docs tr{
+    border: 1px solid var(--c-border);
+    border-radius: 16px;
+    padding: 14px;
+    margin-bottom: 12px;
+    background: #fff;
+    box-shadow: var(--shadow);
+  }
+
+  .table--docs td{
+    border-top: 0;
+    padding: 0;
+    margin-top: 10px;
+    min-width: 0;
+  }
+  .table--docs td:first-child{ margin-top: 0; }
+
+  .table--docs td[data-label]{
+    display:grid;
+    grid-template-columns: 110px minmax(0, 1fr);
+    gap: 10px;
+    align-items:center;
+
+    padding: 10px 12px;
+    border: 1px solid rgba(226,232,240,.95);
+    border-radius: 14px;
+    background: rgba(241,245,249,.55);
+  }
+
+  .table--docs td[data-label]::before{
+    content: attr(data-label);
+    font-size: 12px;
+    font-weight: 950;
+    color: var(--c-text-3);
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+
+  .table--docs .td-actions{
+    padding: 0;
+    border: 0;
+    background: transparent;
+  }
+
+  .table--docs .td-actions .actions{
+    padding: 10px;
+    border: 1px solid rgba(2,132,199,.16);
+    background: rgba(2,132,199,.04);
+    border-radius: 16px;
+  }
+
+  .table--docs .due-wrap{ justify-content:flex-start; }
 }
 
-/* ---------------------------------------------------------
-   CALENDAR
---------------------------------------------------------- */
+/* =========================================================
+   Calendar table
+========================================================= */
 .table--calendar{
   width:100%;
   table-layout: fixed;
 }
 .table--calendar th:nth-child(1), .table--calendar td:nth-child(1){ width: 220px; }
 .table--calendar th:nth-child(2), .table--calendar td:nth-child(2){ width: auto; }
-.table--calendar th:nth-child(3), .table--calendar td:nth-child(3){ width: 140px; }
+.table--calendar th:nth-child(3), .table--calendar td:nth-child(3){ width: 120px; }
+
 .table--calendar td:nth-child(2){ overflow:hidden; }
 .table--calendar td:nth-child(2) .cal-title{
   display:block;
@@ -259,20 +251,18 @@
   font-weight: 900;
 }
 
-/* ---------------------------------------------------------
-   UPLOAD (Dropzone)
---------------------------------------------------------- */
+/* =========================================================
+   Upload (Dropzone)
+========================================================= */
 .dropzone{
   border: 2px dashed rgba(2,132,199,.45);
   border-radius: var(--r-10);
   padding: 20px;
   background: rgba(2,132,199,.04);
-
   display:flex;
   align-items:center;
   justify-content:space-between;
   gap: 12px;
-
   cursor: pointer;
   transition: background .12s ease, border-color .12s ease;
 }
@@ -289,12 +279,13 @@
 .dropzone__right{ display:flex; align-items:center; gap: 10px; }
 .dropzone__count{ color: var(--c-text-2); font-size: 13px; font-weight: 900; }
 
-/* ---------------------------------------------------------
-   ADMIN (estable)
---------------------------------------------------------- */
+/* =========================================================
+   Admin styles (estables)
+========================================================= */
 .admin-card{
   background: linear-gradient(180deg, #fff 0%, rgba(241,245,249,.55) 100%);
 }
+
 .admin-switches{
   display:flex;
   gap: 14px;
@@ -309,48 +300,142 @@
   font-weight: 900;
   color: var(--c-text-2);
 }
+
+.admin-actions-row{
+  display:flex;
+  justify-content:flex-start;
+  margin-top: 10px;
+}
+
+.admin-actionpanel{
+  display:grid;
+  gap: 8px;
+  align-items:start;
+}
+
+.admin-details{
+  border: 1px solid rgba(226,232,240,.95);
+  border-radius: 14px;
+  background: rgba(241,245,249,.45);
+  overflow: hidden;
+}
+.admin-details > summary{
+  list-style: none;
+  cursor: pointer;
+}
+.admin-details > summary::-webkit-details-marker{ display:none; }
+.admin-details > summary.btn{
+  width: 100%;
+  justify-content: flex-start;
+}
+
+.form--compact{ gap: 10px; padding: 10px; margin-top: 0; }
+.form--compact .input{ padding: 10px 12px; }
+
 .table--admin{
-  width:100%;
   table-layout: fixed;
+  min-width: 980px;
 }
-.table--admin th:nth-child(1), .table--admin td:nth-child(1){ width: 16%; }
-.table--admin th:nth-child(2), .table--admin td:nth-child(2){ width: 22%; }
-.table--admin th:nth-child(3), .table--admin td:nth-child(3){ width: 12%; }
-.table--admin th:nth-child(4), .table--admin td:nth-child(4){ width: 12%; }
-.table--admin th:nth-child(5), .table--admin td:nth-child(5){ width: 14%; }
-.table--admin th:nth-child(6), .table--admin td:nth-child(6){ width: 24%; }
-.table--admin td{ vertical-align: top; }
-.table--admin td:nth-child(1) .is-truncate,
-.table--admin td:nth-child(2) .is-truncate{
-  display:block;
-  min-width:0;
-  max-width:100%;
-  white-space:nowrap;
-  overflow:hidden;
-  text-overflow:ellipsis;
+.table--admin td{ overflow:hidden; }
+.table--admin th:nth-child(1), .table--admin td:nth-child(1){ width: 160px; }
+.table--admin th:nth-child(2), .table--admin td:nth-child(2){ width: 260px; }
+.table--admin th:nth-child(3), .table--admin td:nth-child(3){ width: 120px; }
+.table--admin th:nth-child(4), .table--admin td:nth-child(4){ width: 120px; }
+.table--admin th:nth-child(5), .table--admin td:nth-child(5){ width: 160px; }
+.table--admin th:nth-child(6), .table--admin td:nth-child(6){ width: 260px; }
+
+.table--cats{
+  table-layout: fixed;
+  min-width: 520px;
 }
-.table--admin td:nth-child(3),
-.table--admin td:nth-child(4){
-  text-align: center;
+.table--cats td{ overflow:hidden; }
+.table--cats th:nth-child(2), .table--cats td:nth-child(2){ width: 220px; }
+
+.cats-actions form{ display:flex; justify-content:flex-start; }
+
+@media (max-width: 860px){
+  .table--admin, .table--cats{ min-width: 0; }
 }
 
-/* ---------------------------------------------------------
-   Responsive
---------------------------------------------------------- */
-/* Si el ancho ya no da, habilitamos scroll */
-@media (max-width: 1150px){
-  .table-wrap{ overflow-x: auto; }
-}
+/* Preview modal: iframe pegado */
+#previewModal .modal__body{ padding: 0; }
 
+/* Responsive stats */
 @media (max-width: 980px){
   .stats{ grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 720px){
+  .stats{ grid-template-columns: 1fr; }
+}
+/* =========================================================
+   Admin — FIX Acciones (botones compactos y bonitos)
+   - Evita "pastillas gigantes" por grid stretch
+   - Layout 2 columnas + Eliminar full width
+========================================================= */
 
-  /* acciones un poco más compactas */
-  .table--docs th:nth-child(6),
-  .table--docs td:nth-child(6){ width: 220px; }
+.table--admin td:last-child{ padding-right: 16px; }
+
+/* Panel acciones: 2 columnas compactas */
+.table--admin .admin-actionpanel{
+  display:grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+
+  /* ✅ clave: no estirar visual feo */
+  align-items: start;
+  justify-items: stretch;
 }
 
-@media (max-width: 520px){
-  .stats{ grid-template-columns: 1fr; }
-  .table-wrap{ overflow-x: auto; }
+/* Que cada bloque no empuje */
+.table--admin .admin-actionpanel > details,
+.table--admin .admin-actionpanel > form{
+  min-width:0;
+}
+
+/* Botones dentro del panel: compactos */
+.table--admin .admin-actionpanel .btn{
+  width: 100%;
+  padding: 9px 10px;
+  border-radius: 12px;
+  font-size: 13px;
+  min-height: 40px;
+}
+
+/* Ghost neutro SOLO en Admin (menos azul, más pro) */
+.table--admin .btn--ghost{
+  background: rgba(15,23,42,.04);
+  border-color: rgba(15,23,42,.10);
+  color: var(--c-text-2);
+}
+.table--admin .btn--ghost:hover{
+  background: rgba(15,23,42,.07);
+  border-color: rgba(15,23,42,.16);
+}
+
+/* Details: el summary se comporta como botón real */
+.table--admin .admin-details > summary.btn{
+  width:100%;
+  justify-content:flex-start;
+}
+
+/* Forms: el botón ocupa bien el espacio */
+.table--admin .admin-actionpanel form{ width:100%; }
+.table--admin .admin-actionpanel form button{ width:100%; }
+
+/* ✅ Eliminar: que destaque y ocupe toda la fila */
+.table--admin .admin-actionpanel form:last-child{
+  grid-column: 1 / -1;
+}
+.table--admin .admin-actionpanel form:last-child .btn{
+  min-height: 42px;
+}
+
+/* En pantallas más angostas: 1 columna */
+@media (max-width: 980px){
+  .table--admin .admin-actionpanel{
+    grid-template-columns: 1fr;
+  }
+  .table--admin .admin-actionpanel form:last-child{
+    grid-column: auto;
+  }
 }

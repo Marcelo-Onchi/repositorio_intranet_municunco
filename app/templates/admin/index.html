@@ -103,7 +103,7 @@
               </td>
 
               <td title="{{ u.email }}">
-                <span class="is-truncate">{{ u.email }}</span>
+                <div class="is-truncate">{{ u.email }}</div>
               </td>
 
               <td>
@@ -128,7 +128,7 @@
                 </span>
               </td>
 
-              <td class="admin-actions-cell">
+              <td>
                 {% if current_user.id == u.id %}
                   <div class="muted small">Tu cuenta</div>
                 {% else %}
@@ -237,7 +237,7 @@
       <div class="card__title">NUEVA CATEGORÍA</div>
 
       <form method="POST" action="{{ url_for('admin.create_category') }}" class="form form--compact">
-        <div class="form__grid admin-grid-2">
+        <div class="form__grid" style="grid-template-columns: 1fr 220px;">
           <div class="form__row">
             <input class="input" name="name" placeholder="Ej: Contratos, Resoluciones, Actas..." required />
           </div>

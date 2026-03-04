@@ -72,4 +72,4 @@ class Config:
     # Static cache-buster (CSS/JS)
     # ==========================================================
     # Sube este número/string cada vez que cambies CSS/JS y el navegador no refresque.
-    STATIC_VERSION = 2
+    STATIC_VERSION = 6

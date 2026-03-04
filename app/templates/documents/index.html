@@ -14,12 +14,13 @@
   <div class="card">
     <form method="GET" action="{{ url_for('documents.index') }}" class="toolbar">
       <div class="toolbar__left">
-        <div class="form__row" style="min-width:260px;">
+
+        <div class="form__row toolbar__field--search">
           <label class="label" for="q">Buscar</label>
           <input class="input" id="q" name="q" value="{{ q }}" placeholder="Ej: resolución, contrato, acta..." />
         </div>
 
-        <div class="form__row" style="min-width:220px;">
+        <div class="form__row toolbar__field--cat">
           <label class="label" for="category_id">Categoría</label>
           <select class="input" id="category_id" name="category_id">
             <option value="">Todas</option>
@@ -29,17 +30,17 @@
           </select>
         </div>
 
-        <div class="form__row" style="min-width:160px;">
+        <div class="form__row toolbar__field--date">
           <label class="label" for="desde">Desde</label>
           <input class="input" id="desde" name="desde" value="{{ desde }}" data-date placeholder="dd-mm-aaaa" />
         </div>
 
-        <div class="form__row" style="min-width:160px;">
+        <div class="form__row toolbar__field--date">
           <label class="label" for="hasta">Hasta</label>
           <input class="input" id="hasta" name="hasta" value="{{ hasta }}" data-date placeholder="dd-mm-aaaa" />
         </div>
 
-        <div class="form__row" style="min-width:210px;">
+        <div class="form__row toolbar__field--due">
           <label class="label" for="due_status">Vencimiento</label>
           <select class="input" id="due_status" name="due_status">
             <option value="all" {% if due_status == "all" %}selected{% endif %}>Todos</option>
@@ -50,7 +51,7 @@
           </select>
         </div>
 
-        <div class="form__row" style="min-width:220px;">
+        <div class="form__row toolbar__field--sort">
           <label class="label" for="sort">Orden</label>
           <select class="input" id="sort" name="sort">
             <option value="created_desc" {% if sort == "created_desc" %}selected{% endif %}>Más recientes</option>
@@ -58,6 +59,7 @@
             <option value="due_desc" {% if sort == "due_desc" %}selected{% endif %}>Fecha límite (más lejana)</option>
           </select>
         </div>
+
       </div>
 
       <div class="toolbar__right">
@@ -91,7 +93,7 @@
               {% set fn = (d.filename or '')|lower %}
               {% set is_previewable = fn.endswith('.pdf') or fn.endswith('.png') or fn.endswith('.jpg') or fn.endswith('.jpeg') or fn.endswith('.webp') %}
               <tr>
-                <td>
+                <td class="td-doc" data-label="Documento">
                   <span class="file-pill" title="{{ d.filename }}">
                     <span class="file-pill__icon" aria-hidden="true">📄</span>
                     <span class="file-pill__text">{{ d.filename }}</span>
@@ -99,43 +101,53 @@
                   <div class="help file-meta">Nombre interno: {{ d.name }}</div>
                 </td>
 
-                <td>
-                  {% if d.category %}
-                    <span class="badge">🏷️ {{ d.category.name }}</span>
-                  {% else %}
-                    <span class="badge">—</span>
-                  {% endif %}
-                </td>
-
-                <td>{{ d.created_at.strftime("%d-%m-%Y %H:%M") }}</td>
-
-                <td>
-                  <div class="due-wrap">
-                    {% if d.due_date %}
-                      {% set today = d.due_date.__class__.today() %}
-                      {% set diff = (d.due_date - today).days %}
-
-                      {% if diff < 0 %}
-                        <span class="badge badge--danger" title="Vencido hace {{ (diff * -1) }} día(s)">🔴 {{ d.due_date.strftime("%d-%m-%Y") }}</span>
-                      {% elif diff == 0 %}
-                        <span class="badge badge--warn" title="Vence hoy">🟠 {{ d.due_date.strftime("%d-%m-%Y") }}</span>
-                      {% elif diff <= 7 %}
-                        <span class="badge badge--warn" title="Faltan {{ diff }} día(s)">🟠 {{ d.due_date.strftime("%d-%m-%Y") }}</span>
-                      {% else %}
-                        <span class="badge badge--ok" title="Faltan {{ diff }} día(s)">🟢 {{ d.due_date.strftime("%d-%m-%Y") }}</span>
-                      {% endif %}
+                <td data-label="Categoría">
+                  <div class="cell">
+                    {% if d.category %}
+                      <span class="badge">🏷️ {{ d.category.name }}</span>
                     {% else %}
-                      <span class="badge" title="Sin fecha límite">—</span>
+                      <span class="badge" title="Sin categoría">Sin categoría</span>
                     {% endif %}
                   </div>
                 </td>
 
-                <td>
-                  {% set mb = (d.file_size / 1024 / 1024) %}
-                  {{ "%.2f"|format(mb) }} MB
+                <td data-label="Subido">
+                  <div class="cell">
+                    {{ d.created_at.strftime("%d-%m-%Y %H:%M") }}
+                  </div>
                 </td>
 
-                <td>
+                <td data-label="Vence">
+                  <div class="cell">
+                    <div class="due-wrap">
+                      {% if d.due_date %}
+                        {% set today = d.due_date.__class__.today() %}
+                        {% set diff = (d.due_date - today).days %}
+
+                        {% if diff < 0 %}
+                          <span class="badge badge--danger" title="Vencido hace {{ (diff * -1) }} día(s)">🔴 {{ d.due_date.strftime("%d-%m-%Y") }}</span>
+                        {% elif diff == 0 %}
+                          <span class="badge badge--warn" title="Vence hoy">🟠 {{ d.due_date.strftime("%d-%m-%Y") }}</span>
+                        {% elif diff <= 7 %}
+                          <span class="badge badge--warn" title="Faltan {{ diff }} día(s)">🟠 {{ d.due_date.strftime("%d-%m-%Y") }}</span>
+                        {% else %}
+                          <span class="badge badge--ok" title="Faltan {{ diff }} día(s)">🟢 {{ d.due_date.strftime("%d-%m-%Y") }}</span>
+                        {% endif %}
+                      {% else %}
+                        <span class="badge" title="Sin fecha límite">—</span>
+                      {% endif %}
+                    </div>
+                  </div>
+                </td>
+
+                <td data-label="Tamaño">
+                  <div class="cell">
+                    {% set mb = (d.file_size / 1024 / 1024) %}
+                    {{ "%.2f"|format(mb) }} MB
+                  </div>
+                </td>
+
+                <td class="td-actions" data-label="Acciones">
                   <div class="actions">
                     {% if is_previewable %}
                       <button
@@ -172,7 +184,6 @@
       </div>
     </div>
 
-    <!-- Modal preview -->
     <div id="previewModal" class="modal" aria-hidden="true">
       <div class="modal__panel" role="dialog" aria-modal="true" aria-label="Vista previa">
         <div class="modal__head">
