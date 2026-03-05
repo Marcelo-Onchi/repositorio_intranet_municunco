@@ -122,12 +122,27 @@
                     >📤 Subir Documento</a>
 
                     {% set docs_url = url_for("documents.index") %}
-                    {% set docs_active = (path.startswith('/documents') and path != dash_url and path != upload_url) %}
+                    {% set oficio_url = url_for("documents.oficio") %}
+
+                    {# Activo para "Explorar": cualquier /documents* excepto dashboard, upload y oficio #}
+                    {% set docs_active = (
+                      path.startswith('/documents')
+                      and path != dash_url
+                      and path != upload_url
+                      and not path.startswith('/documents/oficio')
+                    ) %}
+
                     <a
                       class="nav__item {% if docs_active %}is-active{% endif %}"
                       href="{{ docs_url }}"
                       {% if docs_active %}aria-current="page"{% endif %}
                     >📁 Explorar</a>
+
+                    <a
+                      class="nav__item {% if path.startswith('/documents/oficio') %}is-active{% endif %}"
+                      href="{{ oficio_url }}"
+                      {% if path.startswith('/documents/oficio') %}aria-current="page"{% endif %}
+                    >🧩 Generar Oficios</a>
 
                     {% set cal_url = url_for("calendar.index") %}
                     <a
