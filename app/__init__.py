@@ -4,22 +4,24 @@ import os
 from pathlib import Path
 
 from dotenv import load_dotenv
-from flask import Flask, redirect, url_for
-from flask_login import current_user
 
-from .config import Config
-from .extensions import db, login_manager, migrate
+# Cargar .env ANTES de importar Config (import-time)
+load_dotenv()
+
+from flask import Flask, redirect, url_for  # noqa: E402
+from flask_login import current_user  # noqa: E402
+
+from .config import Config  # noqa: E402
+from .extensions import db, login_manager, migrate  # noqa: E402
 
 
 def create_app() -> Flask:
-    load_dotenv()
-
     app = Flask(__name__, instance_relative_config=True)
     app.config.from_object(Config)
 
     # ------------------------------------------------------
-    # SQLite estable en instance/ (evita DBs "fantasma")
-    # Si la URI es sqlite:///local.db (relativa), la llevamos a instance/local.db
+    # Normalizar SQLite solo si efectivamente estamos en SQLite
+    # (En Postgres NO tocamos la URI)
     # ------------------------------------------------------
     uri = (app.config.get("SQLALCHEMY_DATABASE_URI") or "").strip()
     if uri.startswith("sqlite:///") and not uri.startswith("sqlite:////"):
@@ -30,9 +32,14 @@ def create_app() -> Flask:
 
     # ------------------------------------------------------
     # Upload path (on-premise friendly)
+    # - Acepta UPLOAD_DIR o UPLOAD_PATH (compat)
     # ------------------------------------------------------
-    upload_cfg = app.config.get("UPLOAD_PATH", "uploads")
-    upload_path = Path(upload_cfg)
+    upload_cfg = (
+        app.config.get("UPLOAD_PATH")
+        or os.getenv("UPLOAD_DIR")
+        or "uploads"
+    )
+    upload_path = Path(str(upload_cfg))
 
     if not upload_path.is_absolute():
         upload_path = Path(app.instance_path) / upload_path
@@ -52,7 +59,7 @@ def create_app() -> Flask:
     login_manager.login_message_category = "warning"
 
     # ------------------------------------------------------
-    # CLI (init-db / db-info)
+    # CLI
     # ------------------------------------------------------
     from .cli import register_cli
     register_cli(app)

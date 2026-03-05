@@ -40,6 +40,7 @@ class User(db.Model, UserMixin):
         back_populates="uploaded_by",
         lazy="select",
         cascade="all, delete-orphan",
+        passive_deletes=True,  # ✅ respeta ON DELETE en DB (mejor para Postgres)
     )
 
     google_token = db.relationship(
@@ -48,6 +49,7 @@ class User(db.Model, UserMixin):
         uselist=False,
         lazy="select",
         cascade="all, delete-orphan",
+        passive_deletes=True,  # ✅ respeta ON DELETE CASCADE
     )
 
     def set_password(self, raw: str) -> None:
@@ -74,6 +76,12 @@ class Category(db.Model):
 class Document(db.Model):
     __tablename__ = "document"
 
+    __table_args__ = (
+        db.CheckConstraint("file_size >= 0", name="ck_document_file_size_nonneg"),
+        db.Index("ix_document_category_id", "category_id"),
+        db.Index("ix_document_uploaded_by_id", "uploaded_by_id"),
+    )
+
     id = db.Column(db.Integer, primary_key=True)
 
     name = db.Column(db.String(160), nullable=False)
@@ -85,10 +93,18 @@ class Document(db.Model):
 
     due_date = db.Column(db.Date, nullable=True, index=True)
 
-    category_id = db.Column(db.Integer, db.ForeignKey("category.id"), nullable=True)
+    category_id = db.Column(
+        db.Integer,
+        db.ForeignKey("category.id", ondelete="SET NULL"),
+        nullable=True,
+    )
     category = db.relationship("Category", back_populates="documents", lazy="joined")
 
-    uploaded_by_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
+    uploaded_by_id = db.Column(
+        db.Integer,
+        db.ForeignKey("user.id", ondelete="CASCADE"),
+        nullable=False,
+    )
     uploaded_by = db.relationship("User", back_populates="documents", lazy="joined")
 
 
@@ -103,9 +119,9 @@ class GoogleToken(db.Model):
 
     user_id = db.Column(
         db.Integer,
-        db.ForeignKey("user.id"),
+        db.ForeignKey("user.id", ondelete="CASCADE"),
         unique=True,
-        index=True,  # ✅ recomendado
+        index=True,
         nullable=False,
     )
     user = db.relationship("User", back_populates="google_token", lazy="joined")
@@ -117,4 +133,9 @@ class GoogleToken(db.Model):
     scopes = db.Column(db.Text, nullable=True)
 
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+    updated_at = db.Column(
+        db.DateTime,
+        default=datetime.utcnow,
+        onupdate=datetime.utcnow,
+        nullable=False,
+    )
