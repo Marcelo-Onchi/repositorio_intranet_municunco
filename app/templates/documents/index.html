@@ -93,7 +93,6 @@
               {% set is_previewable = fn.endswith('.pdf') or fn.endswith('.png') or fn.endswith('.jpg') or fn.endswith('.jpeg') or fn.endswith('.webp') %}
 
               <tr>
-                <!-- ✅ Documento: NOMBRE DE ARCHIVO (visible y primero) -->
                 <td class="td-doc" data-label="Documento">
                   <span class="file-pill" title="{{ d.filename }}">
                     <span class="file-pill__icon" aria-hidden="true">📄</span>
@@ -148,7 +147,6 @@
                   </div>
                 </td>
 
-                <!-- ✅ Acciones (SIN Completar) -->
                 <td class="td-actions" data-label="Acciones">
                   <div class="actions">
                     {% if is_previewable %}
@@ -214,44 +212,12 @@
   <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/es.js"></script>
   <script>
     window.addEventListener("DOMContentLoaded", () => {
-      // Calendario bonito
       const opts = { locale: "es", dateFormat: "d-m-Y", allowInput: true };
       document.querySelectorAll("[data-date]").forEach((el) => flatpickr(el, opts));
 
-      // ✅ Evita que la tabla quede “corrida” a la derecha al cargar
+      // Evita que el contenedor quede corrido a la derecha al volver atrás
       const wrap = document.querySelector(".table-wrap");
       if (wrap) wrap.scrollLeft = 0;
-
-      // Modal vista previa (si ya lo manejas en tu base.js, esto no estorba)
-      const modal = document.getElementById("previewModal");
-      if (!modal) return;
-
-      const frame = modal.querySelector(".modal__frame");
-      const title = modal.querySelector(".modal__title");
-      const closeBtns = modal.querySelectorAll("[data-modal-close]");
-
-      const openModal = (src, t) => {
-        if (title) title.textContent = t || "Vista previa";
-        if (frame) frame.src = src || "about:blank";
-        modal.setAttribute("aria-hidden", "false");
-        modal.classList.add("is-open");
-      };
-
-      const closeModal = () => {
-        modal.setAttribute("aria-hidden", "true");
-        modal.classList.remove("is-open");
-        if (frame) frame.src = "about:blank";
-      };
-
-      document.querySelectorAll("[data-modal-open]").forEach((btn) => {
-        btn.addEventListener("click", () => {
-          openModal(btn.getAttribute("data-modal-open"), btn.getAttribute("data-modal-title"));
-        });
-      });
-
-      closeBtns.forEach((b) => b.addEventListener("click", closeModal));
-      modal.addEventListener("click", (e) => { if (e.target === modal) closeModal(); });
-      window.addEventListener("keydown", (e) => { if (e.key === "Escape") closeModal(); });
     });
   </script>
 {% endblock %}

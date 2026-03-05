@@ -64,6 +64,11 @@
 
     const applySize = (size) => {
       const s = SIZES.includes(size) ? size : "md";
+
+      // Importante: si el usuario redimensionó manualmente, limpiar inline sizes
+      panel.style.width = "";
+      panel.style.height = "";
+
       SIZES.forEach((x) => panel.classList.remove(`is-${x}`));
       panel.classList.add(`is-${s}`);
 
@@ -188,9 +193,7 @@
         const dt = new DataTransfer();
         for (const f of files) dt.items.add(f);
         input.files = dt.files;
-      } catch (_) {
-        // Navegadores restrictivos: no romper UX.
-      }
+      } catch (_) {}
 
       updateCount();
     });

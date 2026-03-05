@@ -31,6 +31,13 @@
   text-overflow:ellipsis;
 }
 
+.table--dashboard{
+  table-layout: fixed;
+}
+.table--dashboard th:nth-child(1), .table--dashboard td:nth-child(1){ width: 180px; }
+.table--dashboard th:nth-child(2), .table--dashboard td:nth-child(2){ width: auto; }
+.table--dashboard td{ overflow:hidden; }
+
 @media (max-width: 1024px){
   .stats{ grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
@@ -58,13 +65,14 @@
 }
 
 .toolbar__field--search{ grid-column: span 2; }
+
 @media (max-width: 1100px){
   .toolbar__field--search{ grid-column: auto; }
 }
 
 .toolbar__right{
   display:flex;
-  gap: 12px;
+  gap: 10px;
   flex-wrap: wrap;
   justify-content:flex-end;
   align-items:center;
@@ -84,13 +92,13 @@
   table-layout: fixed;
 }
 
-/* ✅ IMPORTANT: ancho de la primera columna (Documento) */
+/* Anchos para evitar “todo apretado” + mantener acciones visibles */
 .table--docs th:nth-child(1), .table--docs td:nth-child(1){ width: 360px; }
 .table--docs th:nth-child(2), .table--docs td:nth-child(2){ width: 170px; }
 .table--docs th:nth-child(3), .table--docs td:nth-child(3){ width: 170px; }
 .table--docs th:nth-child(4), .table--docs td:nth-child(4){ width: 160px; }
 .table--docs th:nth-child(5), .table--docs td:nth-child(5){ width: 110px; }
-.table--docs th:nth-child(6), .table--docs td:nth-child(6){ width: 220px; }
+.table--docs th:nth-child(6), .table--docs td:nth-child(6){ width: 240px; }
 
 .table--docs th{
   overflow:hidden;
@@ -318,7 +326,7 @@
 .table--admin th:nth-child(3), .table--admin td:nth-child(3){ width: 120px; }
 .table--admin th:nth-child(4), .table--admin td:nth-child(4){ width: 120px; }
 .table--admin th:nth-child(5), .table--admin td:nth-child(5){ width: 160px; }
-.table--admin th:nth-child(6), .table--admin td:nth-child(6){ width: 280px; }
+.table--admin th:nth-child(6), .table--admin td:nth-child(6){ width: 300px; }
 
 @media (max-width: 860px){
   .table--admin{ table-layout: auto; }
@@ -419,7 +427,6 @@
   .table--admin .admin-actionpanel .btn{
     white-space: normal;
     overflow-wrap: anywhere;
-    word-break: normal;
     line-height: 1.15;
 
     font-size: 12.5px;
