@@ -1,11 +1,73 @@
 // base.js — helpers UI (Municunco)
-// - Toasts (cerrar + autocerrar)
-// - Modal preview (tamaños + resize + atajos)
+// - Sidebar: off-canvas (móvil/tablet) + colapsable (desktop)
+// - Toasts
+// - Modal preview
 // - Dropzone
 // - Confirm modal
 
 (function () {
   "use strict";
+
+  // =========================
+  // Sidebar (off-canvas en móvil/tablet + colapsable en desktop)
+  // =========================
+  function initSidebar() {
+    const toggleBtn = document.querySelector("[data-sidebar-toggle]");
+    const sidebar = document.querySelector("#sidebar");
+    const closeBtns = document.querySelectorAll("[data-sidebar-close]");
+
+    if (!toggleBtn || !sidebar) return;
+
+    const isDesktop = () => window.matchMedia("(min-width: 1025px)").matches;
+
+    const setMobileOpen = (open) => {
+      document.body.classList.toggle("sidebar-open", open);
+      toggleBtn.setAttribute("aria-expanded", open ? "true" : "false");
+      document.body.style.overflow = open ? "hidden" : "";
+    };
+
+    const toggleDesktopCollapse = () => {
+      const collapsed = document.body.classList.toggle("sidebar-collapsed");
+      // en desktop no bloqueamos scroll
+      toggleBtn.setAttribute("aria-expanded", collapsed ? "false" : "true");
+    };
+
+    toggleBtn.addEventListener("click", () => {
+      if (isDesktop()) {
+        toggleDesktopCollapse();
+        return;
+      }
+      const open = document.body.classList.contains("sidebar-open");
+      setMobileOpen(!open);
+    });
+
+    closeBtns.forEach((b) =>
+      b.addEventListener("click", () => {
+        if (!isDesktop()) setMobileOpen(false);
+      })
+    );
+
+    // ESC cierra menú móvil
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape" && document.body.classList.contains("sidebar-open")) {
+        setMobileOpen(false);
+      }
+    });
+
+    // Si pasas a desktop, aseguramos estado móvil limpio (sin backdrop)
+    const mq = window.matchMedia("(min-width: 1025px)");
+    const onChange = () => {
+      if (mq.matches) {
+        setMobileOpen(false);
+      } else {
+        // al volver a móvil, si estaba colapsado, lo dejamos visible
+        document.body.classList.remove("sidebar-collapsed");
+        toggleBtn.setAttribute("aria-expanded", "false");
+      }
+    };
+    if (mq.addEventListener) mq.addEventListener("change", onChange);
+    else mq.addListener(onChange);
+  }
 
   // =========================
   // Toasts
@@ -65,7 +127,6 @@
     const applySize = (size) => {
       const s = SIZES.includes(size) ? size : "md";
 
-      // Importante: si el usuario redimensionó manualmente, limpiar inline sizes
       panel.style.width = "";
       panel.style.height = "";
 
@@ -82,7 +143,6 @@
       });
     };
 
-    // Inserta la toolbar una sola vez (sin tocar HTML)
     if (!head.querySelector(".modal__tools")) {
       const tools = document.createElement("div");
       tools.className = "modal__tools";
@@ -92,7 +152,6 @@
         <button class="iconbtn" type="button" data-preview-size="lg" aria-pressed="false" aria-label="Vista previa: tamaño grande">+</button>
         <button class="iconbtn" type="button" data-preview-size="xl" aria-pressed="false" aria-label="Vista previa: pantalla completa">⛶</button>
       `;
-
       const closeBtn = head.querySelector("[data-modal-close]");
       head.insertBefore(tools, closeBtn);
     }
@@ -137,7 +196,6 @@
       if (e.target === modal) close();
     });
 
-    // Atajos: ESC cierra, + agranda, - achica
     document.addEventListener("keydown", (e) => {
       if (!modal.classList.contains("is-open")) return;
 
@@ -266,6 +324,7 @@
   // Init
   // =========================
   window.addEventListener("DOMContentLoaded", () => {
+    initSidebar();
     initToasts();
     initModalPreview();
     initDropzone();

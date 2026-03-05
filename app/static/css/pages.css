@@ -1,7 +1,9 @@
 /* ==========================================================================
    PAGES.CSS — Municunco (2026)
-   Objetivo: módulos (Dashboard / Docs / Admin) con responsive real.
-   ========================================================================== */
+   - Dashboard / Docs / Admin responsive real
+   - Docs actions: no “aplastadas”
+   - Admin actions: se ven bien (stack vertical)
+   ========================================================================= */
 
 /* =========================================================
    Dashboard
@@ -30,14 +32,6 @@
   overflow:hidden;
   text-overflow:ellipsis;
 }
-
-.table--dashboard{
-  table-layout: fixed;
-}
-.table--dashboard th:nth-child(1), .table--dashboard td:nth-child(1){ width: 180px; }
-.table--dashboard th:nth-child(2), .table--dashboard td:nth-child(2){ width: auto; }
-.table--dashboard td{ overflow:hidden; }
-
 @media (max-width: 1024px){
   .stats{ grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
@@ -54,6 +48,7 @@
   gap: 12px;
   align-items:end;
   margin: 10px 0 14px;
+  min-width:0;
 }
 
 .toolbar__left{
@@ -65,7 +60,6 @@
 }
 
 .toolbar__field--search{ grid-column: span 2; }
-
 @media (max-width: 1100px){
   .toolbar__field--search{ grid-column: auto; }
 }
@@ -76,7 +70,7 @@
   flex-wrap: wrap;
   justify-content:flex-end;
   align-items:center;
-  min-width: 0;
+  min-width:0;
 }
 
 @media (max-width: 860px){
@@ -89,26 +83,17 @@
    Docs table (Desktop)
 ========================================================= */
 .table--docs{
-  table-layout: fixed;
+  table-layout: auto;
 }
-
-/* Anchos para evitar “todo apretado” + mantener acciones visibles */
-.table--docs th:nth-child(1), .table--docs td:nth-child(1){ width: 360px; }
-.table--docs th:nth-child(2), .table--docs td:nth-child(2){ width: 170px; }
-.table--docs th:nth-child(3), .table--docs td:nth-child(3){ width: 170px; }
-.table--docs th:nth-child(4), .table--docs td:nth-child(4){ width: 160px; }
-.table--docs th:nth-child(5), .table--docs td:nth-child(5){ width: 110px; }
-.table--docs th:nth-child(6), .table--docs td:nth-child(6){ width: 240px; }
-
+.table--docs th, .table--docs td{ min-width:0; }
 .table--docs th{
   overflow:hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-
 .table--docs td{ overflow:hidden; }
 
-/* Pill del documento */
+/* Pill documento */
 .table--docs .file-pill{
   display:flex;
   align-items:center;
@@ -142,7 +127,6 @@
   white-space:nowrap;
   text-overflow:ellipsis;
 }
-
 .file-meta{
   margin-top: 6px;
   max-width: 100%;
@@ -151,29 +135,39 @@
   white-space: nowrap;
 }
 
-/* Acciones docs: apiladas */
-.table--docs .actions{
-  display:flex;
-  flex-direction:column;
-  gap: 10px;
-  align-items:stretch;
+/* Acciones docs:
+   - Desktop: grid 2 columnas; eliminar ocupa toda la fila
+*/
+@media (min-width: 861px){
+  .table--docs .td-actions{ min-width: 240px; }
+
+  .table--docs .actions{
+    display:grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    align-items: stretch;
+  }
+
+  .table--docs .actions > *{ width:100%; }
+  .table--docs .actions form{ width:100%; }
+  .table--docs .actions form button{ width:100%; }
+
+  .table--docs .actions .btn{
+    width:100%;
+    font-size: 13px;
+    padding: 10px 12px;
+    border-radius: 12px;
+    min-height: 40px;
+  }
+
+  /* Eliminar en fila completa */
+  .table--docs .actions form:last-child{ grid-column: 1 / -1; }
 }
-.table--docs .actions > *{ width: 100%; }
-.table--docs .actions .btn{
-  width: 100%;
-  font-size: 13px;
-  padding: 10px 12px;
-  border-radius: 12px;
-  min-height: 40px;
-}
-.table--docs .actions form{ width:100%; }
-.table--docs .actions form button{ width:100%; }
 
 /* =========================================================
    Docs stack (Mobile)
 ========================================================= */
 @media (max-width: 860px){
-  .table--docs{ table-layout: auto; }
   .table--docs thead{ display:none; }
 
   .table--docs, .table--docs tbody, .table--docs tr, .table--docs td{
@@ -220,11 +214,6 @@
     line-height: 1.15;
   }
 
-  .table--docs td[data-label] > *{
-    max-width: 100%;
-    min-width: 0;
-  }
-
   .table--docs .td-actions{
     padding: 0;
     border: 0;
@@ -232,13 +221,14 @@
   }
 
   .table--docs .td-actions .actions{
+    display:flex;
+    flex-direction:column;
+    gap: 10px;
     padding: 10px;
     border: 1px solid rgba(2,132,199,.16);
     background: rgba(2,132,199,.04);
     border-radius: 16px;
   }
-
-  .table--docs .due-wrap{ justify-content:flex-start; }
 }
 
 /* =========================================================
@@ -314,46 +304,31 @@
 }
 .form--compact .input{ padding: 10px 12px; }
 
-/* Admin table */
-.table--admin{
-  table-layout: fixed;
-}
-
+/* Admin table: acciones SIEMPRE visibles */
+.table--admin{ table-layout: auto; }
 .table--admin td{ overflow:hidden; }
 
-.table--admin th:nth-child(1), .table--admin td:nth-child(1){ width: 160px; }
-.table--admin th:nth-child(2), .table--admin td:nth-child(2){ width: 260px; }
-.table--admin th:nth-child(3), .table--admin td:nth-child(3){ width: 120px; }
-.table--admin th:nth-child(4), .table--admin td:nth-child(4){ width: 120px; }
-.table--admin th:nth-child(5), .table--admin td:nth-child(5){ width: 160px; }
-.table--admin th:nth-child(6), .table--admin td:nth-child(6){ width: 300px; }
-
-@media (max-width: 860px){
-  .table--admin{ table-layout: auto; }
+/* La columna acciones necesita aire */
+.table--admin th:nth-child(6),
+.table--admin td:nth-child(6){
+  width: 340px;
+  min-width: 320px;
+  overflow: visible;
 }
 
-/* Cats */
-.table--cats{
-  table-layout: fixed;
-}
-.table--cats td{ overflow:hidden; }
-.table--cats th:nth-child(2), .table--cats td:nth-child(2){ width: 220px; }
-.cats-actions form{ display:flex; justify-content:flex-start; }
-@media (max-width: 860px){
-  .table--cats{ table-layout: auto; }
-}
-
-/* Admin — Action panel + Details */
+/* Panel acciones: stack vertical (no se rompe, se ve pro) */
 .table--admin .admin-actionpanel{
-  display:grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  display:flex;
+  flex-direction: column;
   gap: 10px;
-  align-items: start;
-  justify-items: stretch;
+  align-items: stretch;
 }
 
 .table--admin .admin-actionpanel > details,
-.table--admin .admin-actionpanel > form{ min-width:0; }
+.table--admin .admin-actionpanel > form{
+  width:100%;
+  min-width:0;
+}
 
 .table--admin details.admin-details{ border: 0; background: transparent; }
 
@@ -363,9 +338,10 @@
   border-radius: 12px;
   font-size: 13px;
   min-height: 40px;
+  justify-content: center;
 }
 
-.table--admin details.admin-details[open]{ grid-column: 1 / -1; }
+/* Details abiertos: panel bonito */
 .table--admin details.admin-details[open] > form{
   position: relative;
   margin-top: 10px;
@@ -406,39 +382,27 @@
   border-radius: 14px;
 }
 
-.table--admin .admin-actionpanel form:last-child{ grid-column: 1 / -1; }
-
-@media (max-width: 980px){
-  .table--admin .admin-actionpanel{ grid-template-columns: 1fr; }
-  .table--admin details.admin-details[open]{ grid-column: auto; }
-  .table--admin .admin-actionpanel form:last-child{ grid-column: auto; }
-}
-
-/* FIX — Admin botones en pantallas angostas */
-.table--admin td:nth-child(6){
-  overflow: visible;
-}
-
+/* Cats */
+.table--cats{ table-layout: fixed; }
+.table--cats td{ overflow:hidden; }
+.table--cats th:nth-child(2), .table--cats td:nth-child(2){ width: 220px; }
+.cats-actions form{ display:flex; justify-content:flex-start; }
 @media (max-width: 860px){
-  .table--admin .admin-actionpanel{
-    grid-template-columns: 1fr;
+  .table--cats{ table-layout: auto; }
+}
+
+/* Responsive admin */
+@media (max-width: 980px){
+  .table--admin th:nth-child(6),
+  .table--admin td:nth-child(6){
+    width:auto;
+    min-width: 260px;
   }
 
   .table--admin .admin-actionpanel .btn{
     white-space: normal;
     overflow-wrap: anywhere;
     line-height: 1.15;
-
-    font-size: 12.5px;
-    padding: 9px 10px;
-
-    justify-content: flex-start;
-    text-align: left;
-  }
-
-  .table--admin .admin-actionpanel .btn--danger{
-    justify-content: center;
-    text-align: center;
   }
 }
 

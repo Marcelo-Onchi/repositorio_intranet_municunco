@@ -1,6 +1,8 @@
 /* ==========================================================================
    BASE.CSS — Municunco (2026)
-   Base consistente, responsiva y sin overflow en flex/grid.
+   - Layout limpio, responsivo, anti overflow
+   - Sidebar off-canvas (móvil/tablet) + colapsable (desktop)
+   - Compatible con base.html actual (sidebar-backdrop, topbar__left, etc.)
    ========================================================================= */
 
 :root{
@@ -28,8 +30,9 @@
   --r-6:6px;
   --r-10:10px;
   --r-14:14px;
+
   --shadow:0 1px 3px rgba(0,0,0,.10);
-  --shadow-lg:0 18px 60px rgba(15,23,42,.10);
+  --shadow-lg:0 18px 60px rgba(15,23,42,.12);
 
   /* Spacing scale */
   --gap:18px;
@@ -38,8 +41,17 @@
   --s-3:16px;
   --s-4:22px;
 
-  /* Container */
-  --container:1160px;
+  /* Container (más ancho para que el menú “quede más a la izquierda”) */
+  --container:1600px;
+
+  /* Sidebar */
+  --sidebar-w: 280px;
+
+  /* Z-index */
+  --z-toast: 9999;
+  --z-modal: 9998;
+  --z-sidebar: 9997;
+  --z-backdrop: 9996;
 }
 
 *{ margin:0; padding:0; box-sizing:border-box; }
@@ -51,16 +63,17 @@ body{
   color:var(--c-text);
   line-height:1.5;
   text-rendering: optimizeLegibility;
+  overflow-x: hidden; /* evita scrollbar horizontal */
 }
 
 a{ color:inherit; text-decoration:none; }
 img{ max-width:100%; height:auto; display:block; }
 
-/* Container con padding estable en móvil/tablet */
+/* Container más “pegado” al borde */
 .container{
   max-width: var(--container);
   margin: 0 auto;
-  padding: 0 clamp(12px, 2vw, 16px);
+  padding: 0 clamp(8px, 1.5vw, 14px);
 }
 
 /* =========================
@@ -73,7 +86,6 @@ img{ max-width:100%; height:auto; display:block; }
 .muted{ color: var(--c-text-3); }
 .hr{ height:1px; border:0; background: var(--c-border); margin: 18px 0; }
 
-/* Truncado seguro en flex/grid */
 .is-truncate{
   display:block;
   min-width:0;
@@ -98,14 +110,12 @@ img{ max-width:100%; height:auto; display:block; }
 }
 .skip-link:focus{ left:12px; }
 
-/* Focus visible: solo teclado */
 :focus{ outline:none; }
 :focus-visible{
   box-shadow: 0 0 0 3px rgba(2,132,199,.14);
   border-radius: 12px;
 }
 
-/* Reduce motion */
 @media (prefers-reduced-motion: reduce){
   *{ scroll-behavior:auto !important; transition:none !important; animation:none !important; }
 }
@@ -118,12 +128,20 @@ img{ max-width:100%; height:auto; display:block; }
   color:#fff;
   box-shadow:0 4px 10px rgba(0,0,0,.10);
 }
+
 .topbar__inner{
   display:flex;
   justify-content:space-between;
   align-items:center;
   gap:16px;
-  padding: 16px 0;
+  padding: 14px 0;
+}
+
+.topbar__left{
+  display:flex;
+  align-items:center;
+  gap: 12px;
+  min-width:0;
 }
 
 .brand{ display:flex; align-items:center; gap:12px; min-width:0; }
@@ -139,8 +157,54 @@ img{ max-width:100%; height:auto; display:block; }
 .brand__title{ font-weight:900; font-size:18px; line-height:1.15; }
 .brand__subtitle{ opacity:.92; font-size:12px; margin-top:2px; }
 
-.topbar__right{ display:flex; align-items:center; min-width:0; }
+.topbar__right{
+  display:flex;
+  align-items:center;
+  gap: 10px;
+  min-width:0;
+}
 
+/* Botones compactos */
+.iconbtn{
+  border: 1px solid rgba(226,232,240,.95);
+  background: #fff;
+  color: var(--c-text-2);
+  border-radius: 12px;
+  padding: 8px 10px;
+  font-weight: 950;
+  cursor: pointer;
+  line-height: 1;
+}
+.iconbtn:hover{ background: rgba(241,245,249,.75); }
+.iconbtn:active{ transform: translateY(1px); }
+
+/* Botón menú siempre visible y legible sobre topbar */
+.iconbtn--menu{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  background: rgba(255,255,255,.92);
+  border-color: rgba(255,255,255,.35);
+  color: #0f172a;
+  min-width: 42px;
+  min-height: 38px;
+}
+.iconbtn--menu:hover{ background:#fff; }
+
+/* Botón cerrar dentro del sidebar */
+.iconbtn--close{
+  width: 34px;
+  height: 34px;
+  display:grid;
+  place-items:center;
+  border-radius: 10px;
+  border: 1px solid rgba(226,232,240,.95);
+  background:#fff;
+  color: var(--c-text-2);
+}
+.iconbtn--close:hover{ background: rgba(241,245,249,.75); }
+
+/* Pill usuario */
 .pill{
   display:flex; align-items:center; gap:10px;
   background:rgba(255,255,255,.10);
@@ -168,12 +232,17 @@ img{ max-width:100%; height:auto; display:block; }
 
 .layout{
   display:grid;
-  grid-template-columns: 280px 1fr;
+  grid-template-columns: var(--sidebar-w) 1fr;
   gap: var(--gap);
   align-items:start;
+  min-width:0;
 }
 
-.sidebar{ position:sticky; top:14px; min-width:0; }
+.sidebar{
+  position:sticky;
+  top:14px;
+  min-width:0;
+}
 
 .content{
   background: transparent;
@@ -182,6 +251,16 @@ img{ max-width:100%; height:auto; display:block; }
   padding: 0;
   min-height: 240px;
   min-width:0;
+}
+
+/* =========================
+   Sidebar header (MENÚ + X)
+========================= */
+.sidebar__head{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap: 10px;
 }
 
 /* =========================
@@ -306,7 +385,6 @@ textarea.input{
   user-select: none;
   white-space: nowrap;
 }
-
 .btn:hover{ background: var(--c-primary-2); }
 .btn:active{ transform: translateY(1px); }
 
@@ -458,7 +536,7 @@ textarea.input{
   display:flex;
   flex-direction:column;
   gap: 10px;
-  z-index: 9999;
+  z-index: var(--z-toast);
   width: min(420px, calc(100vw - 28px));
 }
 .toast{
@@ -508,7 +586,7 @@ textarea.input{
   display:none;
   align-items:center;
   justify-content:center;
-  z-index: 9998;
+  z-index: var(--z-modal);
   padding: 16px;
 }
 .modal.is-open{ display:flex; }
@@ -565,7 +643,6 @@ textarea.input{
 
 .modal__frame{ width:100%; height: 78vh; border: 0; }
 
-/* details/summary con clase btn */
 summary.btn{ list-style: none; }
 summary.btn::-webkit-details-marker{ display:none; }
 
@@ -580,7 +657,7 @@ summary.btn::-webkit-details-marker{ display:none; }
 }
 
 /* =========================
-   Auth (Login / Register)
+   Auth
 ========================= */
 .auth-shell{
   min-height: calc(100vh - 220px);
@@ -645,64 +722,22 @@ summary.btn::-webkit-details-marker{ display:none; }
 }
 
 /* =========================
-   Responsive
+   Preview modal — tools + sizes + resize
 ========================= */
-@media (max-width: 1024px){
-  .layout{ grid-template-columns: 1fr; }
-  .sidebar{ position: static; }
-  .pill{ max-width: 78vw; }
-  .form__grid{ grid-template-columns: 1fr; }
-}
-
-@media (max-width: 768px){
-  .topbar__inner{ padding: 14px 0; }
-  .brand__icon{ width:38px; height:38px; }
-}
-
-@media (max-width: 480px){
-  .card{ padding: 14px; }
-  .card--big{ padding: 16px; }
-  .nav__item{ padding: 11px 11px; }
-  .pill{ max-width: 86vw; padding: 9px 10px; }
-
-  .auth-panel{ padding: 18px; border-radius: 16px; }
-}
-
-/* ==========================================================================
-   Preview modal — tamaños (chico/normal/grande/full) + resize
-   ========================================================================= */
-
 .modal__tools{
   display:flex;
   gap: 8px;
   align-items:center;
 }
-
-.iconbtn{
-  border: 1px solid rgba(226,232,240,.95);
-  background: #fff;
-  color: var(--c-text-2);
-  border-radius: 12px;
-  padding: 8px 10px;
-  font-weight: 950;
-  cursor: pointer;
-  line-height: 1;
-}
-.iconbtn:hover{ background: rgba(241,245,249,.75); }
-.iconbtn:active{ transform: translateY(1px); }
-
 .iconbtn[aria-pressed="true"]{
   border-color: rgba(2,132,199,.35);
   box-shadow: 0 0 0 3px rgba(2,132,199,.10);
 }
-
-/* Tamaños por clase */
 .modal__panel.is-sm{ width: min(720px, 100%); }
 .modal__panel.is-md{ width: min(980px, 100%); }
 .modal__panel.is-lg{ width: min(1200px, 100%); }
 .modal__panel.is-xl{ width: min(96vw, 1400px); }
 
-/* Resize en escritorio */
 @media (min-width: 768px){
   #previewModal .modal__panel{
     resize: both;
@@ -712,8 +747,83 @@ summary.btn::-webkit-details-marker{ display:none; }
     max-height: 92vh;
   }
 }
-
-/* En móvil: evita resize */
 @media (max-width: 767px){
   #previewModal .modal__panel{ resize: none; }
+}
+
+/* =========================
+   Sidebar off-canvas (móvil/tablet)
+   HTML actual:
+   - <div class="sidebar-backdrop" data-sidebar-close>
+   - <aside id="sidebar" class="sidebar">
+========================= */
+.sidebar-backdrop{
+  position: fixed;
+  inset: 0;
+  background: rgba(15,23,42,.55);
+  z-index: var(--z-backdrop);
+  display:none;
+}
+
+/* Tablet/Móvil */
+@media (max-width: 1024px){
+  .layout{ grid-template-columns: 1fr; }
+
+  .sidebar{
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 100vh;
+    width: min(86vw, 340px);
+    padding: 14px;
+    z-index: var(--z-sidebar);
+    transform: translateX(-110%);
+    transition: transform .18s ease;
+    overflow: auto;
+  }
+
+  .sidebar .card{ box-shadow: var(--shadow-lg); }
+
+  body.sidebar-open .sidebar{ transform: translateX(0); }
+  body.sidebar-open .sidebar-backdrop{ display:block; }
+
+  .content{ min-height: auto; }
+}
+
+/* =========================
+   Sidebar colapsable (desktop)
+   JS: body.sidebar-collapsed
+========================= */
+@media (min-width: 1025px){
+  body.sidebar-collapsed .layout{
+    grid-template-columns: 0 1fr;
+  }
+  body.sidebar-collapsed .sidebar{
+    width: 0;
+    padding: 0;
+    overflow: hidden;
+    border: 0;
+  }
+  body.sidebar-collapsed .sidebar .card{ display:none; }
+}
+
+/* =========================
+   Responsive (base)
+========================= */
+@media (max-width: 1024px){
+  .pill{ max-width: 78vw; }
+  .form__grid{ grid-template-columns: 1fr; }
+}
+
+@media (max-width: 768px){
+  .topbar__inner{ padding: 12px 0; }
+  .brand__icon{ width:38px; height:38px; }
+}
+
+@media (max-width: 480px){
+  .card{ padding: 14px; }
+  .card--big{ padding: 16px; }
+  .nav__item{ padding: 11px 11px; }
+  .pill{ max-width: 86vw; padding: 9px 10px; }
+  .auth-panel{ padding: 18px; border-radius: 16px; }
 }
