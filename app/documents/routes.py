@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import mimetypes
-import os
 import shutil
 import subprocess
 import tempfile
@@ -180,6 +179,9 @@ def _replace_in_paragraph_runs(paragraph, mapping: dict[str, str]) -> None:
     """
     Reemplaza placeholders dentro de runs SIN reasignar paragraph.text.
     Preserva formato de la plantilla.
+
+    Nota: para máxima estabilidad, en la plantilla los placeholders deberían estar completos
+    (no cortados por formato en múltiples runs). Aun así, esto funciona bien en la práctica.
     """
     if not paragraph.runs:
         return
@@ -214,6 +216,41 @@ def _docx_replace_text(doc: DocxDocument, mapping: dict[str, str]) -> None:
             for cell in row.cells:
                 for p in cell.paragraphs:
                     _replace_in_paragraph_runs(p, mapping)
+
+
+def _docx_force_bold_placeholders(
+    doc: DocxDocument,
+    keys: set[str],
+    font_name: str = "Arial",
+    font_size_pt: int = 11,
+) -> None:
+    """
+    Aplica Arial 11 + negrita SOLO a los runs donde esté el placeholder.
+    (Ideal si el placeholder no está partido en múltiples runs)
+    """
+
+    def _apply_on_paragraph(paragraph) -> None:
+        for run in paragraph.runs:
+            if not run.text:
+                continue
+            for k in keys:
+                if k in run.text:
+                    try:
+                        run.bold = True
+                        run.font.name = font_name
+                        run.font.size = Pt(font_size_pt)
+                    except Exception:
+                        pass
+                    break
+
+    for p in doc.paragraphs:
+        _apply_on_paragraph(p)
+
+    for table in doc.tables:
+        for row in table.rows:
+            for cell in row.cells:
+                for p in cell.paragraphs:
+                    _apply_on_paragraph(p)
 
 
 def _convert_docx_to_pdf(docx_path: Path, out_dir: Path) -> Path:
@@ -309,12 +346,10 @@ def _send_pdf_from_temp(pdf_path: Path, download_name: str):
     - Envía ese archivo
     - Lo elimina al cerrar la respuesta
     """
-    # Copiamos a un archivo temporal persistente
     tmp = tempfile.NamedTemporaryFile(prefix="municunco_dl_", suffix=".pdf", delete=False)
     tmp_path = Path(tmp.name)
     tmp.close()
 
-    # Copia con reintentos por si el original aún está soltándose
     last_err: Exception | None = None
     for _ in range(20):
         try:
@@ -343,9 +378,8 @@ def _send_pdf_from_temp(pdf_path: Path, download_name: str):
     @resp.call_on_close
     def _cleanup():
         try:
-            tmp_path.unlink(missing_ok=True)  # py3.8+ ignora si no existe
+            tmp_path.unlink(missing_ok=True)
         except TypeError:
-            # compat por si missing_ok no existe
             try:
                 if tmp_path.exists():
                     tmp_path.unlink()
@@ -617,6 +651,11 @@ def delete(doc_id: int):
 # =========================================================
 # Oficio oficial (plantilla fija en uploads/templates) -> PDF
 # URL: /documents/oficio
+#
+# IMPORTANTE:
+# - La plantilla DOCX debe tener estos placeholders:
+#   {{NUM_SOLICITUD}}, {{FECHA_SOLICITUD}}, {{DE_NOMBRE}}, {{DE_CARGO}}, {{A_NOMBRE}},
+#   {{TENOR_LITERAL}}, {{RESPUESTA}}
 # =========================================================
 @bp.get("/oficio")
 @login_required
@@ -629,6 +668,9 @@ def oficio():
     form = FillOficioForm(
         numero_solicitud="MU071T0001762",
         fecha_solicitud="20-01-2026",
+        de_nombre="NELSON OLIVERA STAUB",
+        de_cargo="ADMINISTRADOR MUNICIPAL",
+        a_nombre="CRISTINA INOSTROZA DELGADO",
         tenor_literal="texto de prueba",
         respuesta="respuesta de prueba",
         guardar_pdf=True,
@@ -650,6 +692,11 @@ def oficio_post():
 
     numero = (form.numero_solicitud.data or "").strip()
     fecha_doc = _ddmmyyyy_to_slash(form.fecha_solicitud.data or "")
+
+    de_nombre = (form.de_nombre.data or "").strip()
+    de_cargo = (form.de_cargo.data or "").strip()
+    a_nombre = (form.a_nombre.data or "").strip()
+
     tenor = (form.tenor_literal.data or "").strip()
     resp = (form.respuesta.data or "").strip()
     guardar_pdf = bool(form.guardar_pdf.data)
@@ -657,6 +704,9 @@ def oficio_post():
     mapping = {
         "{{NUM_SOLICITUD}}": numero,
         "{{FECHA_SOLICITUD}}": fecha_doc,
+        "{{DE_NOMBRE}}": de_nombre,
+        "{{DE_CARGO}}": de_cargo,
+        "{{A_NOMBRE}}": a_nombre,
         "{{TENOR_LITERAL}}": tenor,
         "{{RESPUESTA}}": resp,
     }
@@ -669,7 +719,17 @@ def oficio_post():
 
             d = DocxDocument(str(tpl_path))
             _ensure_default_font(d, "Arial", 11)
+
+            # 1) Reemplazar placeholders preservando formato base
             _docx_replace_text(d, mapping)
+
+            # 2) Forzar Arial 11 + negrita SOLO en DE/A/CARGO (placeholders)
+            _docx_force_bold_placeholders(
+                d,
+                keys={"{{DE_NOMBRE}}", "{{DE_CARGO}}", "{{A_NOMBRE}}"},
+                font_name="Arial",
+                font_size_pt=11,
+            )
 
             out_docx = tmp_dir / f"oficio_{safe_num}.docx"
             d.save(str(out_docx))
@@ -704,7 +764,7 @@ def oficio_post():
                     download_name=final_name,
                 )
 
-            # ✅ FIX: cuando NO se guarda, NO servimos tmp_pdf directo (WinError 32).
+            # ✅ FIX WinError 32 cuando NO se guarda: servimos una copia temporal independiente
             return _send_pdf_from_temp(
                 tmp_pdf,
                 download_name=f"Oficio_{safe_num}.pdf",

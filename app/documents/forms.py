@@ -8,23 +8,38 @@ from wtforms.validators import DataRequired, Length
 class FillOficioForm(FlaskForm):
     numero_solicitud = StringField(
         "N° Solicitud",
-        validators=[DataRequired(message="Ingresa el número de solicitud."), Length(max=60)],
+        validators=[DataRequired(), Length(min=3, max=40)],
     )
 
-    # Guardamos como texto "dd-mm-aaaa" porque así lo usa flatpickr.
     fecha_solicitud = StringField(
         "Fecha",
-        validators=[DataRequired(message="Selecciona una fecha (dd-mm-aaaa)."), Length(min=10, max=10)],
+        validators=[DataRequired(), Length(min=8, max=12)],
+        description="En el documento queda como dd/mm/aaaa.",
+    )
+
+    de_nombre = StringField(
+        "DE: Nombre",
+        validators=[DataRequired(), Length(min=3, max=120)],
+    )
+
+    de_cargo = StringField(
+        "DE: Cargo",
+        validators=[DataRequired(), Length(min=3, max=120)],
+    )
+
+    a_nombre = StringField(
+        "A: Nombre destinatario",
+        validators=[DataRequired(), Length(min=3, max=120)],
     )
 
     tenor_literal = TextAreaField(
         "Tenor literal (editable)",
-        validators=[DataRequired(message="Ingresa el tenor literal."), Length(max=5000)],
+        validators=[DataRequired(), Length(min=1, max=6000)],
     )
 
     respuesta = TextAreaField(
         "Respuesta / Observación",
-        validators=[DataRequired(message="Ingresa la respuesta."), Length(max=5000)],
+        validators=[DataRequired(), Length(min=1, max=6000)],
     )
 
-    guardar_pdf = BooleanField("Guardar PDF en el repositorio", default=True)
+    guardar_pdf = BooleanField("Guardar PDF en el repositorio")
