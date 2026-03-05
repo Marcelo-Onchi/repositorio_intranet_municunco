@@ -827,3 +827,16 @@ summary.btn::-webkit-details-marker{ display:none; }
   .pill{ max-width: 86vw; padding: 9px 10px; }
   .auth-panel{ padding: 18px; border-radius: 16px; }
 }
+/* =========================================================
+   Sidebar: ocultar botón X en desktop, mostrar en móvil/tablet
+   ========================================================= */
+
+/* Desktop: sidebar fijo => no mostrar X */
+@media (min-width: 1025px){
+  .sidebar .iconbtn--close{ display:none; }
+}
+
+/* Tablet/Móvil: sidebar off-canvas => mostrar X */
+@media (max-width: 1024px){
+  .sidebar .iconbtn--close{ display:grid; }
+}

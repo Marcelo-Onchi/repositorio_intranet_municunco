@@ -413,3 +413,23 @@
     padding: 8px 10px;
   }
 }
+/* =========================================================
+   Admin > Categorías: botón eliminar más largo
+   ========================================================= */
+
+.table--cats .cats-actions{
+  text-align: right;
+}
+
+.table--cats .cats-actions form{
+  width: 100%;
+  display:flex;
+  justify-content:flex-end;
+}
+
+.table--cats .cats-actions .btn{
+  width: 100%;
+  max-width: 260px;      /* ajusta: 220 / 260 / 320 */
+  min-height: 42px;
+  border-radius: 14px;
+}
