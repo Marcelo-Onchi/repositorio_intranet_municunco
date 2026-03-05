@@ -1,3 +1,4 @@
+# app/calendar_bp/services.py
 from __future__ import annotations
 
 from datetime import datetime, timedelta, time
@@ -8,6 +9,29 @@ from flask import current_app
 from .google_service import create_deadline_event, list_events_range
 
 DEADLINE_PREFIX = "📌 Subir:"
+
+
+def _normalize_ok_err(result: Any) -> Tuple[bool, str]:
+    """
+    Normaliza retornos para evitar bugs:
+    - bool
+    - (bool, str)
+    - None
+    """
+    if isinstance(result, tuple) and len(result) >= 1:
+        ok = bool(result[0])
+        err = ""
+        if len(result) >= 2 and isinstance(result[1], str):
+            err = result[1]
+        return ok, err
+
+    if isinstance(result, bool):
+        return result, ""
+
+    if result is None:
+        return False, "Sin respuesta del servicio."
+
+    return bool(result), ""
 
 
 def list_deadlines_next_days(user_id: int, days: int = 7) -> list[dict[str, Any]]:
@@ -41,12 +65,15 @@ def create_due_date_event_for_document(
     start_dt = datetime.combine(due_date, time(9, 0))
     end_dt = start_dt + timedelta(hours=1)
 
-    ok = create_deadline_event(
+    res = create_deadline_event(
         user_id=user_id,
         title=doc_title,
         description=description or "",
         start_dt=start_dt,
         end_dt=end_dt,
     )
+    ok, err = _normalize_ok_err(res)
 
-    return (bool(ok), "" if ok else f"No se pudo crear el evento en Google Calendar ({tz_name}).")
+    if ok:
+        return True, ""
+    return False, err or f"No se pudo crear el evento en Google Calendar ({tz_name})."

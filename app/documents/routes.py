@@ -1,3 +1,4 @@
+# app/documents/routes.py
 from __future__ import annotations
 
 import mimetypes
@@ -18,6 +19,11 @@ from werkzeug.utils import secure_filename
 
 from app.extensions import db
 from app.models import Category, Document, GoogleToken
+from app.utils.dates import (
+    ddmmyyyy_to_slash as _ddmmyyyy_to_slash,
+    parse_date_ddmmyyyy as _parse_due_date_date,
+    parse_datetime_ddmmyyyy as _parse_date_ddmmyyyy,
+)
 from . import bp
 from .forms import FillOficioForm
 
@@ -35,28 +41,6 @@ def _allowed_file(filename: str) -> bool:
     return ext in allowed
 
 
-def _parse_date_ddmmyyyy(raw: str) -> Optional[datetime]:
-    raw = (raw or "").strip()
-    if not raw:
-        return None
-    for fmt in ("%d-%m-%Y", "%Y-%m-%d"):
-        try:
-            return datetime.strptime(raw, fmt)
-        except ValueError:
-            continue
-    return None
-
-
-def _parse_due_date(raw: str) -> Optional[date]:
-    raw = (raw or "").strip()
-    if not raw:
-        return None
-    try:
-        return datetime.strptime(raw, "%d-%m-%Y").date()
-    except ValueError:
-        return None
-
-
 def _google_connected(user_id: int) -> bool:
     try:
         return bool(GoogleToken.query.filter_by(user_id=user_id).first())
@@ -67,9 +51,13 @@ def _google_connected(user_id: int) -> bool:
 def _create_calendar_deadline_best_effort(title: str, due: date) -> bool:
     """
     Best-effort: crea evento a las 09:00 hora local (1h duración).
-    Si falla, retorna False sin romper el flujo.
+    - No rompe el flujo si falla.
+    - Soporta create_deadline_event que retorne:
+      - bool
+      - (bool, str)
     """
     try:
+        # google_service.py está en app/calendar_bp/google_service.py
         from app.calendar_bp.google_service import create_deadline_event  # type: ignore
     except Exception:
         return False
@@ -83,24 +71,28 @@ def _create_calendar_deadline_best_effort(title: str, due: date) -> bool:
     )
 
     try:
-        ok, err = create_deadline_event(
+        res = create_deadline_event(
             user_id=current_user.id,
             title=(title or "")[:120],
             description=description,
             start_dt=start_dt,
             end_dt=end_dt,
         )
-        if not ok and err:
-            try:
+
+        # Normalización (por si la implementación cambia a bool)
+        if isinstance(res, tuple) and len(res) >= 1:
+            ok = bool(res[0])
+            err = ""
+            if len(res) >= 2 and isinstance(res[1], str):
+                err = res[1]
+            if not ok and err:
                 current_app.logger.warning("Calendar reminder failed: %s", err)
-            except Exception:
-                pass
-        return bool(ok)
+            return ok
+
+        return bool(res)
+
     except Exception as e:
-        try:
-            current_app.logger.warning("Calendar best-effort exception: %s", e)
-        except Exception:
-            pass
+        current_app.logger.warning("Calendar best-effort exception: %s", e)
         return False
 
 
@@ -111,16 +103,6 @@ def _is_previewable(filename: str) -> bool:
 
 def _is_docx(filename: str) -> bool:
     return (filename or "").lower().endswith(".docx")
-
-
-def _ddmmyyyy_to_slash(raw_dd_mm_yyyy: str) -> str:
-    """
-    UI: dd-mm-aaaa  -> Documento: dd/mm/aaaa
-    """
-    raw = (raw_dd_mm_yyyy or "").strip()
-    if len(raw) == 10 and raw[2] == "-" and raw[5] == "-":
-        return raw.replace("-", "/")
-    return raw
 
 
 def _safe_slug(value: str) -> str:
@@ -527,7 +509,7 @@ def upload_post():
     category_id = int(category_id_raw) if category_id_raw.isdigit() else None
 
     due_raw = request.form.get("due_date") or ""
-    due = _parse_due_date(due_raw)
+    due = _parse_due_date_date(due_raw)
 
     if due and due < date.today():
         flash("La fecha límite no puede ser en el pasado.", "warning")
@@ -764,16 +746,13 @@ def oficio_post():
                     download_name=final_name,
                 )
 
-            # ✅ FIX WinError 32 cuando NO se guarda: servimos una copia temporal independiente
+            # FIX WinError 32 cuando NO se guarda: servimos una copia temporal independiente
             return _send_pdf_from_temp(
                 tmp_pdf,
                 download_name=f"Oficio_{safe_num}.pdf",
             )
 
     except Exception as e:
-        try:
-            current_app.logger.exception("Oficio generation failed: %s", e)
-        except Exception:
-            pass
+        current_app.logger.exception("Oficio generation failed: %s", e)
         flash(f"No se pudo generar el PDF: {e}", "danger")
         return render_template("documents/oficio.html", form=form), 500

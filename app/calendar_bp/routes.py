@@ -1,23 +1,17 @@
+# app/calendar_bp/routes.py
 from __future__ import annotations
 
+import secrets
 from datetime import datetime, timedelta
 
-from flask import current_app, flash, redirect, render_template, request, url_for
+import requests
+from flask import current_app, flash, redirect, render_template, request, session, url_for
 from flask_login import current_user, login_required
 
 from app.extensions import db
 from app.models import GoogleToken
+from app.utils.dates import parse_datetime_ddmmyyyy
 from . import bp
-
-
-def _parse_date_ddmmyyyy(raw: str) -> datetime | None:
-    raw = (raw or "").strip()
-    if not raw:
-        return None
-    try:
-        return datetime.strptime(raw, "%d-%m-%Y")
-    except ValueError:
-        return None
 
 
 @bp.get("/")
@@ -26,12 +20,12 @@ def index():
     token = GoogleToken.query.filter_by(user_id=current_user.id).first()
     connected = bool(token)
 
-    desde_raw = request.args.get("desde", "").strip()
-    hasta_raw = request.args.get("hasta", "").strip()
+    desde_raw = (request.args.get("desde", "") or "").strip()
+    hasta_raw = (request.args.get("hasta", "") or "").strip()
 
     hoy = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
-    desde = _parse_date_ddmmyyyy(desde_raw) or hoy
-    hasta = _parse_date_ddmmyyyy(hasta_raw) or (desde + timedelta(days=30))
+    desde = parse_datetime_ddmmyyyy(desde_raw) or hoy
+    hasta = parse_datetime_ddmmyyyy(hasta_raw) or (desde + timedelta(days=30))
 
     if hasta < desde:
         desde, hasta = hasta, desde
@@ -54,7 +48,6 @@ def index():
         connected=connected,
         redirect_uri=current_app.config.get("GOOGLE_REDIRECT_URI", ""),
         events=events,
-        # opcional: por si quieres mostrarlos en template
         desde=desde_raw,
         hasta=hasta_raw,
     )
@@ -72,6 +65,10 @@ def connect():
         flash("Falta configurar GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET / GOOGLE_REDIRECT_URI.", "danger")
         return redirect(url_for("calendar.index"))
 
+    # ✅ OAuth CSRF protection: state
+    state = secrets.token_urlsafe(24)
+    session["google_oauth_state"] = state
+
     from urllib.parse import urlencode
 
     params = {
@@ -82,6 +79,7 @@ def connect():
         "access_type": "offline",
         "prompt": "consent",
         "include_granted_scopes": "true",
+        "state": state,
     }
     url = "https://accounts.google.com/o/oauth2/v2/auth?" + urlencode(params)
     return redirect(url)
@@ -95,12 +93,17 @@ def callback():
         flash(f"Google OAuth cancelado o falló: {err}", "warning")
         return redirect(url_for("calendar.index"))
 
+    # ✅ Validar state (CSRF)
+    state_in = (request.args.get("state") or "").strip()
+    state_expected = (session.pop("google_oauth_state", "") or "").strip()
+    if not state_in or not state_expected or state_in != state_expected:
+        flash("OAuth inválido (state no coincide). Reintenta conectar Google Calendar.", "danger")
+        return redirect(url_for("calendar.index"))
+
     code = (request.args.get("code") or "").strip()
     if not code:
         flash("No llegó el código de autorización de Google.", "danger")
         return redirect(url_for("calendar.index"))
-
-    import requests
 
     client_id = (current_app.config.get("GOOGLE_CLIENT_ID") or "").strip()
     client_secret = (current_app.config.get("GOOGLE_CLIENT_SECRET") or "").strip()
@@ -134,7 +137,7 @@ def callback():
 
     expiry = None
     if isinstance(expires_in, int):
-        # guardar NAIVE UTC
+        # Guardamos NAIVE UTC
         expiry = datetime.utcnow().replace(microsecond=0) + timedelta(seconds=expires_in)
 
     token = GoogleToken.query.filter_by(user_id=current_user.id).first()
