@@ -1,11 +1,18 @@
 from __future__ import annotations
 
 from flask_wtf import FlaskForm
-from wtforms import BooleanField, StringField, TextAreaField
-from wtforms.validators import DataRequired, Length
+from wtforms import BooleanField, SelectField, StringField, TextAreaField
+from wtforms.validators import DataRequired, Length, Optional
 
 
 class FillOficioForm(FlaskForm):
+    # Tipo de oficio (plantilla)
+    oficio_tipo = SelectField(
+        "Tipo de oficio",
+        choices=[],
+        validators=[DataRequired()],
+    )
+
     numero_solicitud = StringField(
         "N° Solicitud",
         validators=[DataRequired(), Length(min=3, max=40)],
@@ -43,3 +50,25 @@ class FillOficioForm(FlaskForm):
     )
 
     guardar_pdf = BooleanField("Guardar PDF en el repositorio")
+
+    # Categoría para guardado (solo si guardar_pdf=True)
+    # - coerce=int para que venga como int desde el select
+    category_id = SelectField(
+        "Categoría para guardar",
+        coerce=int,
+        choices=[],
+        validators=[Optional()],
+    )
+
+    def validate(self, extra_validators=None) -> bool:
+        ok = super().validate(extra_validators=extra_validators)
+        if not ok:
+            return False
+
+        if bool(self.guardar_pdf.data):
+            # 0 => "— Selecciona —"
+            if int(self.category_id.data or 0) == 0:
+                self.category_id.errors.append("Selecciona una categoría para guardar el PDF.")
+                return False
+
+        return True

@@ -1,6 +1,7 @@
 # app/documents/routes.py
 from __future__ import annotations
 
+import json
 import mimetypes
 import shutil
 import subprocess
@@ -26,6 +27,45 @@ from app.utils.dates import (
 )
 from . import bp
 from .forms import FillOficioForm
+
+
+# =========================================================
+# Config de plantillas de Oficios (multi-plantilla)
+# =========================================================
+# - key: valor del select
+# - filename: DOCX en uploads/templates
+# - display_name: nombre amigable
+# - fields: campos visibles/requeridos para esta plantilla
+# - mapping: placeholders -> campo del form
+#
+# Para agregar otra plantilla:
+# 1) Copias el DOCX a uploads/templates
+# 2) Agregas otra entrada aquí
+# 3) Listo (el front oculta/muestra campos y el back genera)
+OFICIO_TEMPLATES: dict[str, dict] = {
+    "oficio_respuesta": {
+        "display_name": "Oficio Respuesta",
+        "filename": "oficio_respuesta_template_v1.docx",
+        "fields": [
+            "numero_solicitud",
+            "fecha_solicitud",
+            "de_nombre",
+            "de_cargo",
+            "a_nombre",
+            "tenor_literal",
+            "respuesta",
+        ],
+        "mapping": {
+            "{{NUM_SOLICITUD}}": "numero_solicitud",
+            "{{FECHA_SOLICITUD}}": "fecha_solicitud",
+            "{{DE_NOMBRE}}": "de_nombre",
+            "{{DE_CARGO}}": "de_cargo",
+            "{{A_NOMBRE}}": "a_nombre",
+            "{{TENOR_LITERAL}}": "tenor_literal",
+            "{{RESPUESTA}}": "respuesta",
+        },
+    },
+}
 
 
 # =========================================================
@@ -57,7 +97,6 @@ def _create_calendar_deadline_best_effort(title: str, due: date) -> bool:
       - (bool, str)
     """
     try:
-        # google_service.py está en app/calendar_bp/google_service.py
         from app.calendar_bp.google_service import create_deadline_event  # type: ignore
     except Exception:
         return False
@@ -79,7 +118,6 @@ def _create_calendar_deadline_best_effort(title: str, due: date) -> bool:
             end_dt=end_dt,
         )
 
-        # Normalización (por si la implementación cambia a bool)
         if isinstance(res, tuple) and len(res) >= 1:
             ok = bool(res[0])
             err = ""
@@ -101,10 +139,6 @@ def _is_previewable(filename: str) -> bool:
     return fn.endswith((".pdf", ".png", ".jpg", ".jpeg", ".webp"))
 
 
-def _is_docx(filename: str) -> bool:
-    return (filename or "").lower().endswith(".docx")
-
-
 def _safe_slug(value: str) -> str:
     raw = (value or "").strip()
     out = []
@@ -115,9 +149,6 @@ def _safe_slug(value: str) -> str:
 
 
 def _generated_dir() -> Path:
-    """
-    Carpeta persistente para PDFs generados (para guardarlos como Document).
-    """
     base = Path(current_app.config["UPLOAD_PATH"])
     gen = base / "generated"
     gen.mkdir(parents=True, exist_ok=True)
@@ -125,10 +156,6 @@ def _generated_dir() -> Path:
 
 
 def _templates_dir() -> Path:
-    """
-    Carpeta persistente para plantillas DOCX fijas.
-    Por defecto: uploads/templates
-    """
     base = Path(current_app.config["UPLOAD_PATH"])
     configured = (current_app.config.get("DOCX_TEMPLATES_DIR") or "").strip()
     if configured:
@@ -136,19 +163,11 @@ def _templates_dir() -> Path:
     return base / "templates"
 
 
-def _oficio_template_path() -> Path:
-    """
-    Ruta final al DOCX oficial.
-    """
-    return _templates_dir() / (
-        current_app.config.get("OFICIO_TEMPLATE_FILENAME") or "oficio_respuesta_template_v1.docx"
-    )
+def _oficio_template_path(filename: str) -> Path:
+    return _templates_dir() / filename
 
 
 def _ensure_default_font(doc: DocxDocument, font_name: str = "Arial", font_size_pt: int = 11) -> None:
-    """
-    Asegura que el estilo Normal del documento sea Arial 11.
-    """
     try:
         style = doc.styles["Normal"]
         style.font.name = font_name
@@ -158,13 +177,6 @@ def _ensure_default_font(doc: DocxDocument, font_name: str = "Arial", font_size_
 
 
 def _replace_in_paragraph_runs(paragraph, mapping: dict[str, str]) -> None:
-    """
-    Reemplaza placeholders dentro de runs SIN reasignar paragraph.text.
-    Preserva formato de la plantilla.
-
-    Nota: para máxima estabilidad, en la plantilla los placeholders deberían estar completos
-    (no cortados por formato en múltiples runs). Aun así, esto funciona bien en la práctica.
-    """
     if not paragraph.runs:
         return
 
@@ -187,9 +199,6 @@ def _replace_in_paragraph_runs(paragraph, mapping: dict[str, str]) -> None:
 
 
 def _docx_replace_text(doc: DocxDocument, mapping: dict[str, str]) -> None:
-    """
-    Reemplazo de placeholders manteniendo formato.
-    """
     for p in doc.paragraphs:
         _replace_in_paragraph_runs(p, mapping)
 
@@ -206,11 +215,6 @@ def _docx_force_bold_placeholders(
     font_name: str = "Arial",
     font_size_pt: int = 11,
 ) -> None:
-    """
-    Aplica Arial 11 + negrita SOLO a los runs donde esté el placeholder.
-    (Ideal si el placeholder no está partido en múltiples runs)
-    """
-
     def _apply_on_paragraph(paragraph) -> None:
         for run in paragraph.runs:
             if not run.text:
@@ -236,19 +240,8 @@ def _docx_force_bold_placeholders(
 
 
 def _convert_docx_to_pdf(docx_path: Path, out_dir: Path) -> Path:
-    """
-    Convierte DOCX -> PDF.
-    Prioridad:
-      1) LibreOffice (Ubuntu recomendado)
-      2) docx2pdf (Windows + Word instalado)
-
-    Windows:
-    - Inicializa COM (CoInitialize) para docx2pdf
-    - Espera a que el PDF quede liberado (evita WinError 32)
-    """
     out_dir.mkdir(parents=True, exist_ok=True)
 
-    # 1) LibreOffice
     lo_bin = (current_app.config.get("LIBREOFFICE_BIN") or "soffice").strip()
     lo_real = shutil.which(lo_bin) or shutil.which("soffice")
     if lo_real:
@@ -272,7 +265,6 @@ def _convert_docx_to_pdf(docx_path: Path, out_dir: Path) -> Path:
             raise RuntimeError("No se generó el PDF (salida inesperada de LibreOffice).")
         return pdf_path
 
-    # 2) docx2pdf + Word
     try:
         from docx2pdf import convert  # type: ignore
     except Exception:
@@ -283,7 +275,6 @@ def _convert_docx_to_pdf(docx_path: Path, out_dir: Path) -> Path:
 
     pdf_path = out_dir / f"{docx_path.stem}.pdf"
 
-    # COM init (soluciona -2147221008 CoInitialize)
     try:
         import pythoncom  # type: ignore
 
@@ -305,7 +296,6 @@ def _convert_docx_to_pdf(docx_path: Path, out_dir: Path) -> Path:
             except Exception:
                 pass
 
-    # Espera a que Word suelte el archivo
     for _ in range(30):
         if pdf_path.exists():
             try:
@@ -322,12 +312,6 @@ def _convert_docx_to_pdf(docx_path: Path, out_dir: Path) -> Path:
 
 
 def _send_pdf_from_temp(pdf_path: Path, download_name: str):
-    """
-    Solución WinError 32:
-    - Copia el PDF a un temp persistente (delete=False)
-    - Envía ese archivo
-    - Lo elimina al cerrar la respuesta
-    """
     tmp = tempfile.NamedTemporaryFile(prefix="municunco_dl_", suffix=".pdf", delete=False)
     tmp_path = Path(tmp.name)
     tmp.close()
@@ -371,6 +355,33 @@ def _send_pdf_from_temp(pdf_path: Path, download_name: str):
             pass
 
     return resp
+
+
+def _build_oficio_defs_for_front() -> dict[str, dict]:
+    """
+    Solo lo que el front necesita:
+    - display_name
+    - fields
+    - display_path
+    """
+    out: dict[str, dict] = {}
+    for k, v in OFICIO_TEMPLATES.items():
+        fn = v.get("filename") or ""
+        out[k] = {
+            "display_name": v.get("display_name") or k,
+            "fields": v.get("fields") or [],
+            "display_path": f"uploads/templates/{fn}" if fn else "—",
+        }
+    return out
+
+
+def _setup_oficio_form_choices(form: FillOficioForm) -> None:
+    # Tipos de oficio
+    form.oficio_tipo.choices = [(k, v["display_name"]) for k, v in OFICIO_TEMPLATES.items()]
+
+    # Categorías para guardar
+    cats = Category.query.order_by(Category.name.asc()).all()
+    form.category_id.choices = [(0, "— Selecciona una categoría —")] + [(c.id, c.name) for c in cats]
 
 
 # =========================================================
@@ -631,69 +642,91 @@ def delete(doc_id: int):
 
 
 # =========================================================
-# Oficio oficial (plantilla fija en uploads/templates) -> PDF
+# Oficios (multi-plantilla)
 # URL: /documents/oficio
-#
-# IMPORTANTE:
-# - La plantilla DOCX debe tener estos placeholders:
-#   {{NUM_SOLICITUD}}, {{FECHA_SOLICITUD}}, {{DE_NOMBRE}}, {{DE_CARGO}}, {{A_NOMBRE}},
-#   {{TENOR_LITERAL}}, {{RESPUESTA}}
 # =========================================================
 @bp.get("/oficio")
 @login_required
 def oficio():
-    tpl_path = _oficio_template_path()
-    if not tpl_path.exists():
-        flash(f"No se encontró la plantilla oficial en: {tpl_path}", "danger")
-        return redirect(url_for("documents.index"))
+    form = FillOficioForm()
+    _setup_oficio_form_choices(form)
 
-    form = FillOficioForm(
-        numero_solicitud="MU071T0001762",
-        fecha_solicitud="20-01-2026",
-        de_nombre="NELSON OLIVERA STAUB",
-        de_cargo="ADMINISTRADOR MUNICIPAL",
-        a_nombre="CRISTINA INOSTROZA DELGADO",
-        tenor_literal="texto de prueba",
-        respuesta="respuesta de prueba",
-        guardar_pdf=True,
+    # Tipo por defecto: primero del dict
+    default_key = next(iter(OFICIO_TEMPLATES.keys()))
+    form.oficio_tipo.data = default_key
+
+    # Defaults demo (puedes quitarlo si quieres)
+    form.numero_solicitud.data = "MU071T0001762"
+    form.fecha_solicitud.data = "20-01-2026"
+    form.de_nombre.data = "NELSON OLIVERA STAUB"
+    form.de_cargo.data = "ADMINISTRADOR MUNICIPAL"
+    form.a_nombre.data = "CRISTINA INOSTROZA DELGADO"
+    form.tenor_literal.data = "texto de prueba"
+    form.respuesta.data = "respuesta de prueba"
+    form.guardar_pdf.data = True
+    form.category_id.data = 0
+
+    defs = _build_oficio_defs_for_front()
+    selected = defs.get(default_key, {})
+    return render_template(
+        "documents/oficio.html",
+        form=form,
+        oficio_defs_json=json.dumps(defs, ensure_ascii=False),
+        selected_template_path=selected.get("display_path", "—"),
     )
-    return render_template("documents/oficio.html", form=form)
 
 
 @bp.post("/oficio")
 @login_required
 def oficio_post():
-    tpl_path = _oficio_template_path()
-    if not tpl_path.exists():
-        flash(f"No se encontró la plantilla oficial en: {tpl_path}", "danger")
-        return redirect(url_for("documents.index"))
-
     form = FillOficioForm()
+    _setup_oficio_form_choices(form)
+
     if not form.validate_on_submit():
-        return render_template("documents/oficio.html", form=form), 400
+        defs = _build_oficio_defs_for_front()
+        selected_key = form.oficio_tipo.data or next(iter(OFICIO_TEMPLATES.keys()))
+        selected = defs.get(selected_key, {})
+        return (
+            render_template(
+                "documents/oficio.html",
+                form=form,
+                oficio_defs_json=json.dumps(defs, ensure_ascii=False),
+                selected_template_path=selected.get("display_path", "—"),
+            ),
+            400,
+        )
+
+    tipo = (form.oficio_tipo.data or "").strip()
+    if tipo not in OFICIO_TEMPLATES:
+        flash("Tipo de oficio inválido.", "danger")
+        return redirect(url_for("documents.oficio"))
+
+    tpl_def = OFICIO_TEMPLATES[tipo]
+    tpl_filename = tpl_def.get("filename") or ""
+    tpl_path = _oficio_template_path(tpl_filename)
+    if not tpl_path.exists():
+        flash(f"No se encontró la plantilla seleccionada en: {tpl_path}", "danger")
+        return redirect(url_for("documents.oficio"))
+
+    # Construir mapping (placeholders -> texto final)
+    mapping: dict[str, str] = {}
+
+    for placeholder, field_name in (tpl_def.get("mapping") or {}).items():
+        val = getattr(form, field_name).data if hasattr(form, field_name) else ""
+        val = (val or "").strip()
+
+        # Normaliza fecha a dd/mm/aaaa para el DOCX
+        if field_name == "fecha_solicitud":
+            val = _ddmmyyyy_to_slash(val)
+
+        mapping[str(placeholder)] = val
 
     numero = (form.numero_solicitud.data or "").strip()
-    fecha_doc = _ddmmyyyy_to_slash(form.fecha_solicitud.data or "")
-
-    de_nombre = (form.de_nombre.data or "").strip()
-    de_cargo = (form.de_cargo.data or "").strip()
-    a_nombre = (form.a_nombre.data or "").strip()
-
-    tenor = (form.tenor_literal.data or "").strip()
-    resp = (form.respuesta.data or "").strip()
-    guardar_pdf = bool(form.guardar_pdf.data)
-
-    mapping = {
-        "{{NUM_SOLICITUD}}": numero,
-        "{{FECHA_SOLICITUD}}": fecha_doc,
-        "{{DE_NOMBRE}}": de_nombre,
-        "{{DE_CARGO}}": de_cargo,
-        "{{A_NOMBRE}}": a_nombre,
-        "{{TENOR_LITERAL}}": tenor,
-        "{{RESPUESTA}}": resp,
-    }
-
     safe_num = _safe_slug(numero)
+
+    guardar_pdf = bool(form.guardar_pdf.data)
+    category_id = int(form.category_id.data or 0) if guardar_pdf else 0
+    final_category_id = category_id if (guardar_pdf and category_id > 0) else None
 
     try:
         with tempfile.TemporaryDirectory(prefix="municunco_oficio_") as tmp:
@@ -702,10 +735,9 @@ def oficio_post():
             d = DocxDocument(str(tpl_path))
             _ensure_default_font(d, "Arial", 11)
 
-            # 1) Reemplazar placeholders preservando formato base
             _docx_replace_text(d, mapping)
 
-            # 2) Forzar Arial 11 + negrita SOLO en DE/A/CARGO (placeholders)
+            # Si tu plantilla usa estos placeholders, aplica negrita (seguro)
             _docx_force_bold_placeholders(
                 d,
                 keys={"{{DE_NOMBRE}}", "{{DE_CARGO}}", "{{A_NOMBRE}}"},
@@ -730,7 +762,7 @@ def oficio_post():
                     filename=final_name[:260],
                     path=str(final_path),
                     file_size=int(size),
-                    category_id=None,
+                    category_id=final_category_id,
                     uploaded_by_id=current_user.id,
                     due_date=None,
                 )
@@ -746,7 +778,6 @@ def oficio_post():
                     download_name=final_name,
                 )
 
-            # FIX WinError 32 cuando NO se guarda: servimos una copia temporal independiente
             return _send_pdf_from_temp(
                 tmp_pdf,
                 download_name=f"Oficio_{safe_num}.pdf",
@@ -755,4 +786,15 @@ def oficio_post():
     except Exception as e:
         current_app.logger.exception("Oficio generation failed: %s", e)
         flash(f"No se pudo generar el PDF: {e}", "danger")
-        return render_template("documents/oficio.html", form=form), 500
+
+        defs = _build_oficio_defs_for_front()
+        selected = defs.get(tipo, {})
+        return (
+            render_template(
+                "documents/oficio.html",
+                form=form,
+                oficio_defs_json=json.dumps(defs, ensure_ascii=False),
+                selected_template_path=selected.get("display_path", "—"),
+            ),
+            500,
+        )

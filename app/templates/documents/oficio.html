@@ -8,66 +8,112 @@
 {% block content %}
   <div class="page-head">
     <h1 class="h1">Generar Oficio</h1>
-    <div class="page-sub">Completa los campos y genera el PDF desde la plantilla oficial.</div>
+    <div class="page-sub">Selecciona el tipo de oficio, completa los campos y genera el PDF desde la plantilla.</div>
   </div>
 
   <div class="card card--big">
     <div class="muted" style="margin-bottom:10px;">
-      <strong>Plantilla:</strong> uploads/templates/oficio_respuesta_template_v1.docx
+      <strong>Plantilla:</strong>
+      <span id="tplPath">{{ selected_template_path }}</span>
     </div>
 
-    <form method="POST" action="{{ url_for('documents.oficio_post') }}" class="form">
+    <form method="POST" action="{{ url_for('documents.oficio_post') }}" class="form" id="oficioForm"
+          data-oficio-defs='{{ oficio_defs_json|safe }}'>
       {{ form.hidden_tag() }}
 
-      <div class="form__grid form__grid--2">
-        <div class="form__row">
+      <!-- Tipo de oficio -->
+      <div class="form__row">
+        <label class="label" for="oficio_tipo">{{ form.oficio_tipo.label.text }}</label>
+        {{ form.oficio_tipo(class_="input", id="oficio_tipo") }}
+        <div class="help">Esto define la plantilla DOCX y los campos visibles.</div>
+        {% if form.oficio_tipo.errors %}
+          <div class="help" style="color:#b91c1c;">{{ form.oficio_tipo.errors[0] }}</div>
+        {% endif %}
+      </div>
+
+      <div class="form__grid form__grid--2" style="margin-top:10px;">
+        <div class="form__row" data-field="numero_solicitud">
           <label class="label" for="numero_solicitud">N° Solicitud</label>
           {{ form.numero_solicitud(class_="input", id="numero_solicitud", placeholder="Ej: MU071T00017666") }}
+          {% if form.numero_solicitud.errors %}
+            <div class="help" style="color:#b91c1c;">{{ form.numero_solicitud.errors[0] }}</div>
+          {% endif %}
         </div>
 
-        <div class="form__row">
+        <div class="form__row" data-field="fecha_solicitud">
           <label class="label" for="fecha_solicitud">Fecha</label>
           {{ form.fecha_solicitud(class_="input", id="fecha_solicitud", placeholder="dd-mm-aaaa", **{"data-date": "1"} ) }}
           <div class="help">En el documento queda como dd/mm/aaaa.</div>
+          {% if form.fecha_solicitud.errors %}
+            <div class="help" style="color:#b91c1c;">{{ form.fecha_solicitud.errors[0] }}</div>
+          {% endif %}
         </div>
       </div>
 
       <div class="form__grid form__grid--2" style="margin-top:10px;">
-        <div class="form__row">
+        <div class="form__row" data-field="de_nombre">
           <label class="label" for="de_nombre">DE: Nombre</label>
           {{ form.de_nombre(class_="input", id="de_nombre", placeholder="Ej: NELSON OLIVERA STAUB") }}
+          {% if form.de_nombre.errors %}
+            <div class="help" style="color:#b91c1c;">{{ form.de_nombre.errors[0] }}</div>
+          {% endif %}
         </div>
 
-        <div class="form__row">
+        <div class="form__row" data-field="de_cargo">
           <label class="label" for="de_cargo">DE: Cargo</label>
           {{ form.de_cargo(class_="input", id="de_cargo", placeholder="Ej: ADMINISTRADOR MUNICIPAL") }}
+          {% if form.de_cargo.errors %}
+            <div class="help" style="color:#b91c1c;">{{ form.de_cargo.errors[0] }}</div>
+          {% endif %}
         </div>
 
-        <div class="form__row">
+        <div class="form__row" data-field="a_nombre">
           <label class="label" for="a_nombre">A: Dirigido a</label>
           {{ form.a_nombre(class_="input", id="a_nombre", placeholder="Ej: CRISTINA INOSTROZA DELGADO") }}
           <div class="help">En la plantilla debe existir {{ "{{A_NOMBRE}}" }}.</div>
+          {% if form.a_nombre.errors %}
+            <div class="help" style="color:#b91c1c;">{{ form.a_nombre.errors[0] }}</div>
+          {% endif %}
         </div>
       </div>
 
-      <div class="form__row" style="margin-top:10px;">
+      <div class="form__row" style="margin-top:10px;" data-field="tenor_literal">
         <label class="label" for="tenor_literal">Tenor literal (editable)</label>
         {{ form.tenor_literal(class_="input", id="tenor_literal", rows="6", style="min-height:140px;", placeholder="Escribe el tenor literal...") }}
+        {% if form.tenor_literal.errors %}
+          <div class="help" style="color:#b91c1c;">{{ form.tenor_literal.errors[0] }}</div>
+        {% endif %}
       </div>
 
-      <div class="form__row" style="margin-top:10px;">
+      <div class="form__row" style="margin-top:10px;" data-field="respuesta">
         <label class="label" for="respuesta">Respuesta / Observación</label>
         {{ form.respuesta(class_="input", id="respuesta", rows="5", style="min-height:120px;", placeholder="Escribe la respuesta u observación...") }}
+        {% if form.respuesta.errors %}
+          <div class="help" style="color:#b91c1c;">{{ form.respuesta.errors[0] }}</div>
+        {% endif %}
       </div>
 
+      <!-- Guardar -->
       <div class="card" style="margin-top:12px;">
         <label style="display:flex; gap:10px; align-items:flex-start;">
-          {{ form.guardar_pdf() }}
+          {{ form.guardar_pdf(id="guardar_pdf") }}
           <div>
             <div style="font-weight:900;">Guardar PDF en el repositorio</div>
             <div class="muted">Si lo activas, se guarda en <code>uploads/generated</code> y aparece en Explorar.</div>
           </div>
         </label>
+
+        <!-- Categoría (solo visible si guardar_pdf activo) -->
+        <div id="categoryWrap" style="margin-top:12px; display:none;">
+          <div class="form__row">
+            <label class="label" for="category_id">{{ form.category_id.label.text }}</label>
+            {{ form.category_id(class_="input", id="category_id") }}
+            <div class="help">Se guardará en la categoría seleccionada.</div>
+            {% if form.category_id.errors %}
+              <div class="help" style="color:#b91c1c;">{{ form.category_id.errors[0] }}</div>
+            {% endif %}
+          </div>
+        </div>
       </div>
 
       <div class="toolbar" style="margin-top:14px;">
@@ -85,16 +131,65 @@
   <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/es.js"></script>
   <script>
     window.addEventListener("DOMContentLoaded", () => {
+      // Fecha (flatpickr)
       const el = document.querySelector("#fecha_solicitud");
-      if (!el) return;
+      if (el) {
+        flatpickr(el, {
+          locale: "es",
+          dateFormat: "d-m-Y",
+          allowInput: false,
+          clickOpens: true,
+          disableMobile: true,
+        });
+      }
 
-      flatpickr(el, {
-        locale: "es",
-        dateFormat: "d-m-Y",
-        allowInput: false,     // ✅ evita escritura manual (solo calendario)
-        clickOpens: true,
-        disableMobile: true,   // ✅ fuerza el calendario “lindo” también en móvil
-      });
+      // Definiciones (plantillas + campos)
+      const form = document.querySelector("#oficioForm");
+      const defs = form ? JSON.parse(form.getAttribute("data-oficio-defs") || "{}") : {};
+      const selectTipo = document.querySelector("#oficio_tipo");
+      const tplPathEl = document.querySelector("#tplPath");
+
+      // Campos por data-field
+      const fieldRows = Array.from(document.querySelectorAll("[data-field]"));
+
+      function applyTemplateVisibility() {
+        if (!selectTipo) return;
+        const key = selectTipo.value;
+        const def = defs[key] || null;
+        const allowed = def && Array.isArray(def.fields) ? new Set(def.fields) : null;
+
+        // Actualiza texto de plantilla
+        if (tplPathEl) tplPathEl.textContent = (def && def.display_path) ? def.display_path : "—";
+
+        // Muestra/oculta campos
+        fieldRows.forEach((row) => {
+          const f = row.getAttribute("data-field");
+          if (!allowed) {
+            row.style.display = "";
+            return;
+          }
+          row.style.display = allowed.has(f) ? "" : "none";
+        });
+      }
+
+      if (selectTipo) {
+        selectTipo.addEventListener("change", applyTemplateVisibility);
+        applyTemplateVisibility();
+      }
+
+      // Mostrar/ocultar selector de categoría al guardar
+      const guardar = document.querySelector("#guardar_pdf");
+      const wrap = document.querySelector("#categoryWrap");
+
+      function toggleCategory() {
+        if (!guardar || !wrap) return;
+        wrap.style.display = guardar.checked ? "block" : "none";
+      }
+
+      if (guardar) {
+        guardar.addEventListener("change", toggleCategory);
+        toggleCategory();
+      }
     });
   </script>
 {% endblock %}
