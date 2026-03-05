@@ -91,14 +91,15 @@
             {% for d in docs %}
               {% set fn = (d.filename or '')|lower %}
               {% set is_previewable = fn.endswith('.pdf') or fn.endswith('.png') or fn.endswith('.jpg') or fn.endswith('.jpeg') or fn.endswith('.webp') %}
-              {% set is_docx = fn.endswith('.docx') %}
+
               <tr>
+                <!-- ✅ Documento: NOMBRE DE ARCHIVO (visible y primero) -->
                 <td class="td-doc" data-label="Documento">
                   <span class="file-pill" title="{{ d.filename }}">
                     <span class="file-pill__icon" aria-hidden="true">📄</span>
                     <span class="file-pill__text">{{ d.filename }}</span>
                   </span>
-                  <div class="help file-meta">Nombre interno: {{ d.name }}</div>
+                  <div class="help file-meta">ID: {{ d.id }}</div>
                 </td>
 
                 <td data-label="Categoría">
@@ -147,16 +148,9 @@
                   </div>
                 </td>
 
+                <!-- ✅ Acciones (SIN Completar) -->
                 <td class="td-actions" data-label="Acciones">
                   <div class="actions">
-                    {% if is_docx %}
-                      <a class="btn btn--ghost btn--small" href="{{ url_for('documents.fill', doc_id=d.id) }}">🧩 Completar</a>
-                    {% else %}
-                      <button class="btn btn--ghost btn--small" type="button" disabled title="Disponible solo para DOCX">
-                        🧩 Completar
-                      </button>
-                    {% endif %}
-
                     {% if is_previewable %}
                       <button
                         class="btn btn--ghost btn--small"
@@ -220,8 +214,44 @@
   <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/es.js"></script>
   <script>
     window.addEventListener("DOMContentLoaded", () => {
+      // Calendario bonito
       const opts = { locale: "es", dateFormat: "d-m-Y", allowInput: true };
       document.querySelectorAll("[data-date]").forEach((el) => flatpickr(el, opts));
+
+      // ✅ Evita que la tabla quede “corrida” a la derecha al cargar
+      const wrap = document.querySelector(".table-wrap");
+      if (wrap) wrap.scrollLeft = 0;
+
+      // Modal vista previa (si ya lo manejas en tu base.js, esto no estorba)
+      const modal = document.getElementById("previewModal");
+      if (!modal) return;
+
+      const frame = modal.querySelector(".modal__frame");
+      const title = modal.querySelector(".modal__title");
+      const closeBtns = modal.querySelectorAll("[data-modal-close]");
+
+      const openModal = (src, t) => {
+        if (title) title.textContent = t || "Vista previa";
+        if (frame) frame.src = src || "about:blank";
+        modal.setAttribute("aria-hidden", "false");
+        modal.classList.add("is-open");
+      };
+
+      const closeModal = () => {
+        modal.setAttribute("aria-hidden", "true");
+        modal.classList.remove("is-open");
+        if (frame) frame.src = "about:blank";
+      };
+
+      document.querySelectorAll("[data-modal-open]").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          openModal(btn.getAttribute("data-modal-open"), btn.getAttribute("data-modal-title"));
+        });
+      });
+
+      closeBtns.forEach((b) => b.addEventListener("click", closeModal));
+      modal.addEventListener("click", (e) => { if (e.target === modal) closeModal(); });
+      window.addEventListener("keydown", (e) => { if (e.key === "Escape") closeModal(); });
     });
   </script>
 {% endblock %}

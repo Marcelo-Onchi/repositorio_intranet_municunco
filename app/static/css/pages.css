@@ -40,7 +40,6 @@
 
 /* =========================================================
    Toolbar (Docs)
-   - Grid con right “pegado” sin hacks.
 ========================================================= */
 .toolbar{
   display:grid;
@@ -50,7 +49,6 @@
   margin: 10px 0 14px;
 }
 
-/* Filtros: auto-fit sin min-width rígido */
 .toolbar__left{
   display:grid;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -59,7 +57,6 @@
   min-width:0;
 }
 
-/* Búsqueda: puede tomar más aire en desktop */
 .toolbar__field--search{ grid-column: span 2; }
 @media (max-width: 1100px){
   .toolbar__field--search{ grid-column: auto; }
@@ -87,12 +84,13 @@
   table-layout: fixed;
 }
 
-/* Ajuste de anchos: estable en 1366/1536 */
+/* ✅ IMPORTANT: ancho de la primera columna (Documento) */
+.table--docs th:nth-child(1), .table--docs td:nth-child(1){ width: 360px; }
 .table--docs th:nth-child(2), .table--docs td:nth-child(2){ width: 170px; }
 .table--docs th:nth-child(3), .table--docs td:nth-child(3){ width: 170px; }
 .table--docs th:nth-child(4), .table--docs td:nth-child(4){ width: 160px; }
 .table--docs th:nth-child(5), .table--docs td:nth-child(5){ width: 110px; }
-.table--docs th:nth-child(6), .table--docs td:nth-child(6){ width: 240px; }
+.table--docs th:nth-child(6), .table--docs td:nth-child(6){ width: 220px; }
 
 .table--docs th{
   overflow:hidden;
@@ -114,7 +112,7 @@
   color: var(--c-primary-3);
 
   padding: 9px 12px;
-  border-radius: var(--r-14);
+  border-radius: 14px;
   background: rgba(2,132,199,.06);
   border: 1px solid rgba(2,132,199,.16);
 }
@@ -313,11 +311,8 @@
   table-layout: fixed;
 }
 
-/* Ojo: NO recortar por defecto la col de acciones,
-   si no el texto/botón se corta cuando hay wrap */
 .table--admin td{ overflow:hidden; }
 
-/* Anchos desktop */
 .table--admin th:nth-child(1), .table--admin td:nth-child(1){ width: 160px; }
 .table--admin th:nth-child(2), .table--admin td:nth-child(2){ width: 260px; }
 .table--admin th:nth-child(3), .table--admin td:nth-child(3){ width: 120px; }
@@ -325,7 +320,6 @@
 .table--admin th:nth-child(5), .table--admin td:nth-child(5){ width: 160px; }
 .table--admin th:nth-child(6), .table--admin td:nth-child(6){ width: 280px; }
 
-/* Tablet/móvil: el fixed layout suele empeorar */
 @media (max-width: 860px){
   .table--admin{ table-layout: auto; }
 }
@@ -355,7 +349,6 @@
 
 .table--admin details.admin-details{ border: 0; background: transparent; }
 
-/* Botones compactos */
 .table--admin .admin-actionpanel .btn{
   width: 100%;
   padding: 9px 10px;
@@ -389,7 +382,6 @@
   content: "Reset contraseña";
 }
 
-/* Switches */
 .table--admin details.admin-details[open] .admin-switches{
   margin-top: 8px;
   padding: 10px 12px;
@@ -406,27 +398,19 @@
   border-radius: 14px;
 }
 
-/* Eliminar en ancho completo (desktop) */
 .table--admin .admin-actionpanel form:last-child{ grid-column: 1 / -1; }
 
-/* Mobile: panel a 1 columna */
 @media (max-width: 980px){
   .table--admin .admin-actionpanel{ grid-template-columns: 1fr; }
   .table--admin details.admin-details[open]{ grid-column: auto; }
   .table--admin .admin-actionpanel form:last-child{ grid-column: auto; }
 }
 
-/* ==========================================================================
-   FIX — Admin botones en pantallas angostas
-   - Permite wrap real de textos y evita recortes.
-   ========================================================================== */
-
-/* La celda Acciones no debe recortar (si no, se “muerde” el botón) */
+/* FIX — Admin botones en pantallas angostas */
 .table--admin td:nth-child(6){
   overflow: visible;
 }
 
-/* Pantallas angostas: 1 columna + wrap legible */
 @media (max-width: 860px){
   .table--admin .admin-actionpanel{
     grid-template-columns: 1fr;
@@ -451,7 +435,6 @@
   }
 }
 
-/* Móviles muy angostos */
 @media (max-width: 420px){
   .table--admin .admin-actionpanel{ gap: 8px; }
   .table--admin .admin-actionpanel .btn{
