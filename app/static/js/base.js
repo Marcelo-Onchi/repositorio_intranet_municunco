@@ -18,17 +18,19 @@
 
     if (!toggleBtn || !sidebar) return;
 
-    const isDesktop = () => window.matchMedia("(min-width: 1025px)").matches;
+    const mqDesktop = window.matchMedia("(min-width: 1025px)");
+    const isDesktop = () => mqDesktop.matches;
 
     const setMobileOpen = (open) => {
       document.body.classList.toggle("sidebar-open", open);
       toggleBtn.setAttribute("aria-expanded", open ? "true" : "false");
+
+      // bloquear scroll sólo en móvil
       document.body.style.overflow = open ? "hidden" : "";
     };
 
     const toggleDesktopCollapse = () => {
       const collapsed = document.body.classList.toggle("sidebar-collapsed");
-      // en desktop no bloqueamos scroll
       toggleBtn.setAttribute("aria-expanded", collapsed ? "false" : "true");
     };
 
@@ -54,10 +56,9 @@
       }
     });
 
-    // Si pasas a desktop, aseguramos estado móvil limpio (sin backdrop)
-    const mq = window.matchMedia("(min-width: 1025px)");
+    // Cambio de breakpoint: limpiar estados
     const onChange = () => {
-      if (mq.matches) {
+      if (mqDesktop.matches) {
         setMobileOpen(false);
       } else {
         // al volver a móvil, si estaba colapsado, lo dejamos visible
@@ -65,8 +66,9 @@
         toggleBtn.setAttribute("aria-expanded", "false");
       }
     };
-    if (mq.addEventListener) mq.addEventListener("change", onChange);
-    else mq.addListener(onChange);
+
+    if (mqDesktop.addEventListener) mqDesktop.addEventListener("change", onChange);
+    else mqDesktop.addListener(onChange);
   }
 
   // =========================

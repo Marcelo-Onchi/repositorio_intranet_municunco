@@ -30,11 +30,15 @@
               aria-controls="sidebar"
               aria-expanded="false"
               data-sidebar-toggle
-            >☰</button>
+            >
+              <i data-lucide="menu"></i>
+            </button>
           {% endif %}
 
           <div class="brand">
-            <div class="brand__icon" aria-hidden="true">📁</div>
+            <div class="brand__icon" aria-hidden="true">
+              <i data-lucide="folder"></i>
+            </div>
             <div class="brand__text">
               <div class="brand__title">Repositorio de Documentos</div>
               <div class="brand__subtitle">Sistema Municipal de Gestión de Documentos</div>
@@ -90,7 +94,6 @@
       <div class="container">
         <div class="layout {% if is_auth %}layout--auth{% endif %}">
           {% if not is_auth %}
-            <!-- Backdrop para móvil/tablet -->
             <div class="sidebar-backdrop" data-sidebar-close aria-hidden="true"></div>
 
             <aside id="sidebar" class="sidebar" aria-label="Menú lateral">
@@ -102,7 +105,9 @@
                     type="button"
                     aria-label="Cerrar menú"
                     data-sidebar-close
-                  >×</button>
+                  >
+                    <i data-lucide="x"></i>
+                  </button>
                 </div>
 
                 <nav class="nav">
@@ -112,19 +117,24 @@
                       class="nav__item {% if path == dash_url %}is-active{% endif %}"
                       href="{{ dash_url }}"
                       {% if path == dash_url %}aria-current="page"{% endif %}
-                    >📊 Dashboard</a>
+                    >
+                      <i data-lucide="layout-dashboard"></i>
+                      <span>Dashboard</span>
+                    </a>
 
                     {% set upload_url = url_for("documents.upload") %}
                     <a
                       class="nav__item {% if path == upload_url %}is-active{% endif %}"
                       href="{{ upload_url }}"
                       {% if path == upload_url %}aria-current="page"{% endif %}
-                    >📤 Subir Documento</a>
+                    >
+                      <i data-lucide="upload"></i>
+                      <span>Subir Documento</span>
+                    </a>
 
                     {% set docs_url = url_for("documents.index") %}
                     {% set oficio_url = url_for("documents.oficio") %}
 
-                    {# Activo para "Explorar": cualquier /documents* excepto dashboard, upload y oficio #}
                     {% set docs_active = (
                       path.startswith('/documents')
                       and path != dash_url
@@ -136,20 +146,29 @@
                       class="nav__item {% if docs_active %}is-active{% endif %}"
                       href="{{ docs_url }}"
                       {% if docs_active %}aria-current="page"{% endif %}
-                    >📁 Explorar</a>
+                    >
+                      <i data-lucide="folder-open"></i>
+                      <span>Explorar</span>
+                    </a>
 
                     <a
                       class="nav__item {% if path.startswith('/documents/oficio') %}is-active{% endif %}"
                       href="{{ oficio_url }}"
                       {% if path.startswith('/documents/oficio') %}aria-current="page"{% endif %}
-                    >🧩 Generar Oficios</a>
+                    >
+                      <i data-lucide="file-pen-line"></i>
+                      <span>Generar Oficios</span>
+                    </a>
 
                     {% set cal_url = url_for("calendar.index") %}
                     <a
                       class="nav__item {% if path.startswith('/calendar') %}is-active{% endif %}"
                       href="{{ cal_url }}"
                       {% if path.startswith('/calendar') %}aria-current="page"{% endif %}
-                    >🗓️ Mi calendario</a>
+                    >
+                      <i data-lucide="calendar-days"></i>
+                      <span>Mi calendario</span>
+                    </a>
 
                     {% if current_user.is_admin %}
                       {% set admin_url = url_for("admin.index") %}
@@ -157,19 +176,28 @@
                         class="nav__item {% if path.startswith('/admin') %}is-active{% endif %}"
                         href="{{ admin_url }}"
                         {% if path.startswith('/admin') %}aria-current="page"{% endif %}
-                      >🛡️ Admin</a>
+                      >
+                        <i data-lucide="shield"></i>
+                        <span>Admin</span>
+                      </a>
                     {% endif %}
 
                     <div class="nav__sep" role="separator" aria-hidden="true"></div>
 
-                    <a class="nav__item nav__item--danger" href="{{ url_for('auth.logout') }}">🚪 Logout</a>
+                    <a class="nav__item nav__item--danger" href="{{ url_for('auth.logout') }}">
+                      <i data-lucide="log-out"></i>
+                      <span>Logout</span>
+                    </a>
                   {% else %}
                     {% set login_url = url_for("auth.login") %}
                     <a
                       class="nav__item {% if path == login_url %}is-active{% endif %}"
                       href="{{ login_url }}"
                       {% if path == login_url %}aria-current="page"{% endif %}
-                    >🔐 Login</a>
+                    >
+                      <i data-lucide="lock"></i>
+                      <span>Login</span>
+                    </a>
                     <div class="nav__hint">Inicia sesión para acceder al repositorio.</div>
                   {% endif %}
                 </nav>
@@ -204,6 +232,15 @@
         </div>
       </div>
     </div>
+
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script>
+      window.addEventListener("DOMContentLoaded", () => {
+        if (window.lucide) {
+          window.lucide.createIcons();
+        }
+      });
+    </script>
 
     {% block extra_scripts %}{% endblock %}
   </body>
