@@ -1,76 +1,66 @@
-# =========================
-# PYTHON
-# =========================
+# ================================
+# Python
+# ================================
 __pycache__/
-*.py[cod]
-*.pyd
+*.pyc
 *.pyo
-*.pkl
+*.pyd
 *.log
-*.tmp
 
-# =========================
-# ENTORNOS VIRTUALES
-# =========================
+# ================================
+# Entorno virtual
+# ================================
 venv/
-.venv/
-env/
-ENV/
-
-# =========================
-# VARIABLES DE ENTORNO
-# =========================
 .env
 .env.*
-!.env.example
 
-# =========================
-# BASES DE DATOS
-# =========================
+# ================================
+# Flask instance folder
+# ================================
+instance/*
+!instance/uploads/
+!instance/uploads/templates/
+!instance/uploads/templates/oficio_respuesta_template_v1.docx
+
+# ================================
+# Uploads (archivos generados)
+# ================================
+uploads/*
+!uploads/templates/
+!uploads/templates/oficio_respuesta_template_v1.docx
+
+# ================================
+# Bases de datos locales
+# ================================
+*.db
 *.sqlite
 *.sqlite3
-*.db
-local.db
 
-# =========================
-# FLASK / INSTANCE
-# =========================
-instance/
+# ================================
+# Archivos temporales
+# ================================
+*.tmp
+*.bak
 
-# =========================
-# UPLOADS (DOCUMENTOS)
-# =========================
-uploads/
-app/uploads/
-
-# =========================
+# ================================
 # IDE
-# =========================
+# ================================
 .vscode/
 .idea/
 
-# =========================
-# SISTEMA OPERATIVO
-# =========================
+# ================================
+# Sistema operativo
+# ================================
 .DS_Store
 Thumbs.db
 
-# =========================
-# BUILD / CACHES
-# =========================
-dist/
-build/
-*.egg-info/
-.pytest_cache/
-.mypy_cache/
-.coverage
-htmlcov/
-
-# =========================
-# LOGS
-# =========================
-*.log
+# ================================
+# Logs
+# ================================
 logs/
+*.log
 
-instance/google_oauth_client.json
-instance/*.json
+# ================================
+# Migraciones compiladas
+# ================================
+migrations/__pycache__/
