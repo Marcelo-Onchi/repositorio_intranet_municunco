@@ -8,7 +8,9 @@
     {% set v = config.get("STATIC_VERSION", "1") %}
     <link rel="stylesheet" href="{{ url_for('static', filename='css/base.css', v=v) }}" />
     <link rel="stylesheet" href="{{ url_for('static', filename='css/pages.css', v=v) }}" />
+
     <script defer src="{{ url_for('static', filename='js/base.js', v=v) }}"></script>
+    <script defer src="https://unpkg.com/lucide@latest"></script>
 
     {% block extra_head %}{% endblock %}
   </head>
@@ -39,6 +41,7 @@
             <div class="brand__icon" aria-hidden="true">
               <i data-lucide="folder"></i>
             </div>
+
             <div class="brand__text">
               <div class="brand__title">Repositorio de Documentos</div>
               <div class="brand__subtitle">Sistema Municipal de Gestión de Documentos</div>
@@ -69,6 +72,7 @@
           {% for category, message in messages %}
             <div class="toast toast--{{ category|e }}" role="status" data-toast>
               <div class="toast__icon" aria-hidden="true"></div>
+
               <div class="toast__body">
                 <div class="toast__title">
                   {% if category == "success" %}
@@ -83,6 +87,7 @@
                 </div>
                 <div class="toast__text">{{ message }}</div>
               </div>
+
               <button class="toast__close" type="button" aria-label="Cerrar" data-toast-close>×</button>
             </div>
           {% endfor %}
@@ -100,6 +105,7 @@
               <div class="card">
                 <div class="card__title sidebar__head">
                   <span>MENÚ</span>
+
                   <button
                     class="iconbtn iconbtn--close"
                     type="button"
@@ -134,7 +140,6 @@
 
                     {% set docs_url = url_for("documents.index") %}
                     {% set oficio_url = url_for("documents.oficio") %}
-
                     {% set docs_active = (
                       path.startswith('/documents')
                       and path != dash_url
@@ -198,6 +203,7 @@
                       <i data-lucide="lock"></i>
                       <span>Login</span>
                     </a>
+
                     <div class="nav__hint">Inicia sesión para acceder al repositorio.</div>
                   {% endif %}
                 </nav>
@@ -213,7 +219,9 @@
     </main>
 
     <footer class="footer">
-      <div class="container">© 2026 Municipalidad de Cunco | Sistema de Repositorio de Documentos | Desarrollo IT</div>
+      <div class="container">
+        © 2026 Municipalidad de Cunco | Sistema de Repositorio de Documentos | Desarrollo IT
+      </div>
     </footer>
 
     <div id="confirmModal" class="modal" aria-hidden="true">
@@ -222,9 +230,11 @@
           <div class="modal__title" data-confirm-title>Confirmación</div>
           <button class="modal__close" type="button" data-confirm-cancel aria-label="Cerrar">×</button>
         </div>
+
         <div class="modal__body">
           <div class="muted" data-confirm-text>¿Confirmas esta acción?</div>
           <div style="height:12px;"></div>
+
           <div class="actions actions--row">
             <button class="btn btn--ghost" type="button" data-confirm-cancel>Cancelar</button>
             <button class="btn btn--danger" type="button" data-confirm-ok>Confirmar</button>
@@ -233,7 +243,6 @@
       </div>
     </div>
 
-    <script src="https://unpkg.com/lucide@latest"></script>
     <script>
       window.addEventListener("DOMContentLoaded", () => {
         if (window.lucide) {
