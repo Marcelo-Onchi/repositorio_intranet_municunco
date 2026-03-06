@@ -10,28 +10,60 @@
     <div class="page-head">
       <h1 class="h1">Subir documentos</h1>
       <p class="muted">
-        Carga uno o varios archivos. Si defines <strong>fecha límite</strong>, se guardará y (si está conectado)
-        se creará el recordatorio en Google Calendar.
+        Carga uno o varios archivos al repositorio. Puedes asignar una categoría y una
+        <strong>fecha límite</strong> para registrar el vencimiento y sincronizarlo con Google Calendar.
       </p>
     </div>
 
+    <div class="dashboard-grid" style="margin-bottom:14px;">
+      <div class="dashboard-panel">
+        <div class="dashboard-panel__head">
+          <div class="dashboard-panel__title">
+            <i data-lucide="folder-plus"></i>
+            <span>Registro de documentos</span>
+          </div>
+        </div>
+
+        <div class="muted">
+          La categoría seleccionada se aplicará a todos los archivos cargados en esta operación.
+        </div>
+      </div>
+
+      <div class="dashboard-panel">
+        <div class="dashboard-panel__head">
+          <div class="dashboard-panel__title">
+            <i data-lucide="calendar-clock"></i>
+            <span>Fecha de vencimiento</span>
+          </div>
+        </div>
+
+        <div class="muted">
+          Si defines una fecha límite y tu cuenta está conectada, el sistema crea automáticamente
+          un evento en Google Calendar.
+        </div>
+      </div>
+    </div>
+
     <form class="form" method="post" enctype="multipart/form-data" action="{{ url_for('documents.upload_post') }}">
-      <div class="form__grid">
+      <div class="form__grid form__grid--upload">
         <div class="form__row">
-          <label class="label">Categoría (opcional)</label>
-          <select class="input" name="category_id">
+          <label class="label" for="category_id">Categoría (opcional)</label>
+          <select class="input" id="category_id" name="category_id">
             <option value="">— Sin categoría —</option>
             {% for c in categories %}
               <option value="{{ c.id }}">{{ c.name }}</option>
             {% endfor %}
           </select>
-          <div class="help">Se aplica a todos los archivos de esta subida.</div>
+          <div class="help upload-help-inline">
+            <i data-lucide="tag"></i>
+            <span>Se aplica a todos los archivos de esta subida.</span>
+          </div>
         </div>
 
         <div class="form__row">
-          <label class="label">Fecha límite (opcional)</label>
+          <label class="label" for="due_date">Fecha límite (opcional)</label>
 
-          <div style="display:flex; gap:8px; align-items:center;">
+          <div class="upload-date-row">
             <input
               class="input"
               name="due_date"
@@ -43,32 +75,66 @@
               maxlength="10"
               pattern="^\d{2}-\d{2}-\d{4}$"
             />
-            <button class="btn btn--ghost btn--small" type="button" id="due_clear">Limpiar</button>
+            <button class="btn btn--ghost btn--small" type="button" id="due_clear">
+              <i data-lucide="eraser"></i>
+              <span>Limpiar</span>
+            </button>
           </div>
 
-          <div class="help">
-            No permite fechas pasadas. Si Google Calendar está conectado, se crea evento
-            <strong>“📌 Subir: …”</strong> a las 09:00 (hora local).
+          <div class="help upload-help-inline">
+            <i data-lucide="info"></i>
+            <span>No permite fechas pasadas. Si Google Calendar está conectado, se genera el recordatorio automáticamente.</span>
           </div>
         </div>
       </div>
 
       <input type="file" name="files" multiple class="input" style="display:none" data-file-input>
 
-      <div class="dropzone" data-dropzone>
-        <div>
-          <div class="dropzone__title">Arrastra archivos aquí o haz clic para seleccionar</div>
-          <div class="dropzone__sub">Permitidos según configuración (PDF/DOCX/XLSX/PNG/JPG/ZIP)</div>
+      <div class="dropzone upload-dropzone" data-dropzone>
+        <div class="upload-dropzone__main">
+          <div class="upload-dropzone__icon">
+            <i data-lucide="cloud-upload"></i>
+          </div>
+
+          <div>
+            <div class="dropzone__title">Arrastra archivos aquí o haz clic para seleccionar</div>
+            <div class="dropzone__sub">
+              Permitidos según configuración del sistema (PDF, DOCX, XLSX, PNG, JPG, ZIP y otros habilitados)
+            </div>
+          </div>
         </div>
+
         <div class="dropzone__right">
           <span class="dropzone__count" data-file-count>0 archivos</span>
-          <span class="badge">MULTI</span>
+          <span class="badge">
+            <i data-lucide="files"></i>
+            <span>Multiarchivo</span>
+          </span>
         </div>
       </div>
 
-      <div class="actions">
-        <button class="btn" type="submit">Subir</button>
-        <a class="btn btn--ghost" href="{{ url_for('documents.index') }}">Volver</a>
+      <div class="callout upload-callout">
+        <div class="callout__text">
+          <strong style="display:flex; align-items:center; gap:8px;">
+            <i data-lucide="shield-check"></i>
+            <span>Buenas prácticas</span>
+          </strong>
+          <div class="muted">
+            Usa nombres claros, asigna categoría cuando corresponda y agrega fecha límite para mejorar el seguimiento documental.
+          </div>
+        </div>
+      </div>
+
+      <div class="actions" style="margin-top:4px;">
+        <button class="btn" type="submit">
+          <i data-lucide="upload"></i>
+          <span>Subir documentos</span>
+        </button>
+
+        <a class="btn btn--ghost" href="{{ url_for('documents.index') }}">
+          <i data-lucide="arrow-left"></i>
+          <span>Volver</span>
+        </a>
       </div>
     </form>
   </div>
@@ -96,6 +162,10 @@
           if (inst) inst.clear();
           dueInput.value = "";
         });
+      }
+
+      if (window.lucide) {
+        window.lucide.createIcons();
       }
     });
   </script>

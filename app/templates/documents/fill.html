@@ -6,22 +6,50 @@
 {% endblock %}
 
 {% block content %}
+  <div class="page-head">
+    <h1 class="h1">Completar plantilla DOCX</h1>
+    <div class="page-sub">Documento base: <strong>{{ doc.filename }}</strong></div>
+  </div>
+
   <div class="card card--big">
-    <div class="page-head">
-      <h1 class="h1">Completar plantilla DOCX</h1>
-      <div class="page-sub">Documento: <strong>{{ doc.filename }}</strong></div>
-      <div class="muted" style="margin-top:6px;">
-        Tip: la plantilla debe contener tags como <code>{{"{{NUM_SOLICITUD}}"}}</code>, <code>{{"{{FECHA_SOLICITUD}}"}}</code>, etc.
+    <div class="dashboard-grid" style="margin-bottom:14px;">
+      <div class="dashboard-panel">
+        <div class="dashboard-panel__head">
+          <div class="dashboard-panel__title">
+            <i data-lucide="file-text"></i>
+            <span>Documento seleccionado</span>
+          </div>
+        </div>
+
+        <div class="muted">
+          <strong>Archivo:</strong> {{ doc.filename }}
+        </div>
+      </div>
+
+      <div class="dashboard-panel">
+        <div class="dashboard-panel__head">
+          <div class="dashboard-panel__title">
+            <i data-lucide="replace"></i>
+            <span>Reemplazo de campos</span>
+          </div>
+        </div>
+
+        <div class="muted">
+          La plantilla debe contener placeholders como
+          <code>{{"{{NUM_SOLICITUD}}"}}</code>,
+          <code>{{"{{FECHA_SOLICITUD}}"}}</code>,
+          <code>{{"{{TENOR_LITERAL}}"}}</code> o similares.
+        </div>
       </div>
     </div>
 
     <form method="POST" action="{{ url_for('documents.fill_post', doc_id=doc.id) }}" class="form">
       {{ form.csrf_token }}
 
-      <div class="form__grid">
+      <div class="form__grid form__grid--fill">
         <div class="form__row">
           <label class="label" for="numero_solicitud">{{ form.numero_solicitud.label.text }}</label>
-          {{ form.numero_solicitud(class="input", id="numero_solicitud") }}
+          {{ form.numero_solicitud(class="input", id="numero_solicitud", placeholder="Ej: MU071T00017666") }}
           {% if form.numero_solicitud.errors %}
             <div class="help" style="color:#b91c1c;">{{ form.numero_solicitud.errors[0] }}</div>
           {% endif %}
@@ -29,21 +57,29 @@
 
         <div class="form__row">
           <label class="label" for="fecha_solicitud">{{ form.fecha_solicitud.label.text }}</label>
-          <div style="display:flex; gap:8px; align-items:center;">
-            {{ form.fecha_solicitud(class="input", id="fecha_solicitud") }}
-            <button class="btn btn--ghost btn--small" type="button" id="fecha_clear">Limpiar</button>
+
+          <div class="fill-date-row">
+            {{ form.fecha_solicitud(class="input", id="fecha_solicitud", placeholder="dd-mm-aaaa") }}
+            <button class="btn btn--ghost btn--small" type="button" id="fecha_clear">
+              <i data-lucide="eraser"></i>
+              <span>Limpiar</span>
+            </button>
           </div>
+
           {% if form.fecha_solicitud.errors %}
             <div class="help" style="color:#b91c1c;">{{ form.fecha_solicitud.errors[0] }}</div>
           {% else %}
-            <div class="help">En el documento queda como dd/mm/aaaa.</div>
+            <div class="help fill-help-inline">
+              <i data-lucide="calendar-days"></i>
+              <span>En el documento se inserta como dd/mm/aaaa.</span>
+            </div>
           {% endif %}
         </div>
       </div>
 
       <div class="form__row">
         <label class="label" for="tenor_literal">{{ form.tenor_literal.label.text }}</label>
-        {{ form.tenor_literal(class="input", id="tenor_literal", style="min-height:140px;") }}
+        {{ form.tenor_literal(class="input", id="tenor_literal", style="min-height:150px;", placeholder="Escribe el tenor literal...") }}
         {% if form.tenor_literal.errors %}
           <div class="help" style="color:#b91c1c;">{{ form.tenor_literal.errors[0] }}</div>
         {% endif %}
@@ -51,25 +87,32 @@
 
       <div class="form__row">
         <label class="label" for="respuesta">{{ form.respuesta.label.text }}</label>
-        {{ form.respuesta(class="input", id="respuesta", style="min-height:120px;") }}
+        {{ form.respuesta(class="input", id="respuesta", style="min-height:130px;", placeholder="Escribe la respuesta u observación...") }}
         {% if form.respuesta.errors %}
           <div class="help" style="color:#b91c1c;">{{ form.respuesta.errors[0] }}</div>
         {% endif %}
       </div>
 
-      <div class="card" style="padding:14px;">
-        <label class="admin-check" style="display:flex; gap:10px; align-items:center;">
+      <div class="card fill-save-card">
+        <label class="fill-save-check">
           {{ form.guardar_pdf() }}
-          <span><strong>{{ form.guardar_pdf.label.text }}</strong></span>
+          <div>
+            <div class="fill-save-title">{{ form.guardar_pdf.label.text }}</div>
+            <div class="muted">Si lo activas, el PDF generado se guarda en <code>uploads/generated</code> y aparecerá en Explorar.</div>
+          </div>
         </label>
-        <div class="help" style="margin-top:6px;">
-          Si lo activas, se guarda en <code>uploads/generated</code> y aparece en Explorar.
-        </div>
       </div>
 
       <div class="actions">
-        <button class="btn" type="submit">📄 Generar PDF</button>
-        <a class="btn btn--ghost" href="{{ url_for('documents.index') }}">Volver</a>
+        <button class="btn" type="submit">
+          <i data-lucide="file-output"></i>
+          <span>Generar PDF</span>
+        </button>
+
+        <a class="btn btn--ghost" href="{{ url_for('documents.index') }}">
+          <i data-lucide="arrow-left"></i>
+          <span>Volver</span>
+        </a>
       </div>
     </form>
   </div>
@@ -82,7 +125,11 @@
     window.addEventListener("DOMContentLoaded", () => {
       const fechaInput = document.querySelector("#fecha_solicitud");
       if (fechaInput) {
-        flatpickr(fechaInput, { locale: "es", dateFormat: "d-m-Y", allowInput: true });
+        flatpickr(fechaInput, {
+          locale: "es",
+          dateFormat: "d-m-Y",
+          allowInput: true
+        });
       }
 
       const clearBtn = document.querySelector("#fecha_clear");
@@ -92,6 +139,10 @@
           if (inst) inst.clear();
           fechaInput.value = "";
         });
+      }
+
+      if (window.lucide) {
+        window.lucide.createIcons();
       }
     });
   </script>

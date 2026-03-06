@@ -891,3 +891,148 @@
     width:140px;
   }
 }
+/* =========================================================
+   Upload refinado
+========================================================= */
+
+.form__grid--upload{
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.upload-date-row{
+  display:flex;
+  gap:8px;
+  align-items:center;
+}
+
+.upload-date-row .input{
+  flex:1 1 auto;
+}
+
+.upload-help-inline{
+  display:flex;
+  align-items:flex-start;
+  gap:8px;
+}
+
+.upload-help-inline svg{
+  width:15px;
+  height:15px;
+  stroke-width:2.2;
+  flex:0 0 auto;
+  margin-top:1px;
+}
+
+.upload-dropzone{
+  margin-top: 4px;
+}
+
+.upload-dropzone__main{
+  display:flex;
+  align-items:center;
+  gap:14px;
+  min-width:0;
+}
+
+.upload-dropzone__icon{
+  width:52px;
+  height:52px;
+  display:grid;
+  place-items:center;
+  border-radius:16px;
+  background:rgba(2,132,199,.08);
+  border:1px solid rgba(2,132,199,.18);
+  flex:0 0 auto;
+}
+
+.upload-dropzone__icon svg{
+  width:22px;
+  height:22px;
+  stroke-width:2.2;
+}
+
+.upload-callout{
+  margin-top: 2px;
+}
+
+@media (max-width: 860px){
+  .form__grid--upload{
+    grid-template-columns: 1fr;
+  }
+
+  .upload-date-row{
+    flex-direction:column;
+    align-items:stretch;
+  }
+
+  .upload-date-row .btn{
+    width:100%;
+  }
+}
+
+@media (max-width: 520px){
+  .upload-dropzone__main{
+    flex-direction:column;
+    align-items:flex-start;
+  }
+}
+/* =========================================================
+   Oficios refinado
+========================================================= */
+
+.form__grid--oficio{
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.form__row--full{
+  grid-column: 1 / -1;
+}
+
+.oficio-help-inline{
+  display:flex;
+  align-items:flex-start;
+  gap:8px;
+}
+
+.oficio-help-inline svg{
+  width:15px;
+  height:15px;
+  stroke-width:2.2;
+  flex:0 0 auto;
+  margin-top:1px;
+}
+
+.oficio-save-card{
+  background:linear-gradient(180deg, #fff 0%, rgba(241,245,249,.60) 100%);
+}
+
+.oficio-save-check{
+  display:flex;
+  gap:10px;
+  align-items:flex-start;
+}
+
+.oficio-save-check input[type="checkbox"]{
+  margin-top:3px;
+  width:16px;
+  height:16px;
+  accent-color:var(--c-primary);
+  flex:0 0 auto;
+}
+
+.oficio-save-title{
+  font-weight:950;
+  color:var(--c-text-2);
+}
+
+@media (max-width: 860px){
+  .form__grid--oficio{
+    grid-template-columns: 1fr;
+  }
+
+  .form__row--full{
+    grid-column: auto;
+  }
+}
