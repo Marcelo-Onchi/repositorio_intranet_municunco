@@ -525,3 +525,181 @@
     padding:8px 10px;
   }
 }
+/* =========================================================
+   Admin refinado
+========================================================= */
+
+.admin-category-grid{
+  grid-template-columns: 1fr 240px !important;
+  gap: 12px;
+}
+
+.admin-category-submit{
+  justify-content: flex-end;
+}
+
+.admin-category-submit .btn{
+  width: 100%;
+}
+
+.admin-label-placeholder{
+  opacity: 0;
+  pointer-events: none;
+  user-select: none;
+}
+
+.table--admin .badge,
+.table--cats .btn,
+.table--admin .btn{
+  overflow: hidden;
+}
+
+.table--admin .btn span,
+.table--cats .btn span{
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.table--admin .btn svg,
+.table--cats .btn svg{
+  flex: 0 0 auto;
+}
+
+.table--admin td:first-child .td-strong{
+  font-size: 14px;
+}
+
+.table--admin td:first-child .muted{
+  margin-top: 4px;
+}
+
+.table--admin .admin-actionpanel .badge{
+  justify-content: center;
+}
+
+@media (max-width: 860px){
+  .admin-category-grid{
+    grid-template-columns: 1fr !important;
+  }
+
+  .admin-label-placeholder{
+    display: none;
+  }
+}
+/* =========================================================
+   Dashboard refinado
+========================================================= */
+
+.table--dashboard{
+  table-layout: fixed;
+}
+
+.table--dashboard th:nth-child(1),
+.table--dashboard td:nth-child(1){
+  width: 220px;
+}
+
+.table--dashboard td{
+  vertical-align: middle;
+}
+
+.table--dashboard .badge{
+  max-width: 100%;
+}
+
+.table--dashboard .badge span{
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.table--dashboard .td-strong{
+  font-size: 14px;
+}
+
+.table--dashboard .help{
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.stat .help svg,
+.table--dashboard .help svg,
+.callout__text strong svg{
+  width: 15px;
+  height: 15px;
+  stroke-width: 2.2;
+  flex: 0 0 auto;
+}
+
+@media (max-width: 860px){
+  .table--dashboard th:nth-child(1),
+  .table--dashboard td:nth-child(1){
+    width: 180px;
+  }
+}
+/* =========================================================
+   Calendar refinado
+========================================================= */
+
+.table--calendar{
+  table-layout: fixed;
+}
+
+.table--calendar th:nth-child(1),
+.table--calendar td:nth-child(1){
+  width: 220px;
+}
+
+.table--calendar th:nth-child(3),
+.table--calendar td:nth-child(3){
+  width: 140px;
+}
+
+.table--calendar td{
+  vertical-align: middle;
+}
+
+.table--calendar .td-strong{
+  font-size: 14px;
+}
+
+.table--calendar .help{
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.table--calendar .btn{
+  width: 100%;
+  max-width: 120px;
+}
+
+.table--calendar .btn span{
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.table--calendar .btn svg,
+.table--calendar .help svg,
+.callout__text .h2 svg,
+.callout__text strong svg{
+  flex: 0 0 auto;
+}
+
+@media (max-width: 860px){
+  .table--calendar th:nth-child(1),
+  .table--calendar td:nth-child(1){
+    width: 180px;
+  }
+
+  .table--calendar th:nth-child(3),
+  .table--calendar td:nth-child(3){
+    width: 120px;
+  }
+}

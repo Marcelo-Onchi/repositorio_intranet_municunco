@@ -4,8 +4,8 @@
 {% block content %}
   <div class="card card--big">
     <div class="page-head">
-      <h1 class="h1">Admin</h1>
-      <p class="muted">Gestión de usuarios y categorías (solo administradores).</p>
+      <h1 class="h1">Administración</h1>
+      <p class="muted">Gestión de usuarios y categorías del repositorio municipal.</p>
     </div>
 
     <div class="stats">
@@ -13,16 +13,21 @@
         <div class="stat__label">Usuarios</div>
         <div class="stat__value">{{ users|length }}</div>
       </div>
+
       <div class="stat">
         <div class="stat__label">Categorías</div>
         <div class="stat__value">{{ categories|length }}</div>
       </div>
+
       <div class="stat">
         <div class="stat__label">Tu sesión</div>
         <div class="stat__value">
-          <span class="is-truncate" title="{{ current_user.username }} (ADMIN)">{{ current_user.username }} (ADMIN)</span>
+          <span class="is-truncate" title="{{ current_user.username }} (ADMIN)">
+            {{ current_user.username }} (ADMIN)
+          </span>
         </div>
       </div>
+
       <div class="stat">
         <div class="stat__label">Estado</div>
         <div class="stat__value">Operativo</div>
@@ -32,8 +37,8 @@
     <hr class="hr" />
 
     <div class="section-head">
-      <h2 class="h2">👥 Usuarios</h2>
-      <div class="muted">Crea, edita, desactiva o elimina cuentas.</div>
+      <h2 class="h2">Usuarios</h2>
+      <div class="muted">Crea, edita, restablece contraseña, activa o elimina cuentas.</div>
     </div>
 
     <div class="card admin-card mt">
@@ -44,7 +49,7 @@
           <div class="form__row">
             <label class="label" for="cu_username">Usuario (sin @)</label>
             <input class="input" id="cu_username" name="username" placeholder="ej: mmontoya" required />
-            <div class="help">3–32: letras/números/punto/guión/guión bajo.</div>
+            <div class="help">3–32 caracteres: letras, números, punto, guión y guión bajo.</div>
           </div>
 
           <div class="form__row">
@@ -76,7 +81,10 @@
         </div>
 
         <div class="admin-actions-row">
-          <button class="btn" type="submit">Crear usuario</button>
+          <button class="btn" type="submit">
+            <i data-lucide="user-plus"></i>
+            <span>Crear usuario</span>
+          </button>
         </div>
       </form>
     </div>
@@ -108,17 +116,29 @@
 
               <td>
                 {% if u.is_active %}
-                  <span class="badge badge--ok">✅ Activo</span>
+                  <span class="badge badge--ok">
+                    <i data-lucide="check-circle-2"></i>
+                    <span>Activo</span>
+                  </span>
                 {% else %}
-                  <span class="badge badge--danger">⛔ Inactivo</span>
+                  <span class="badge badge--danger">
+                    <i data-lucide="x-circle"></i>
+                    <span>Inactivo</span>
+                  </span>
                 {% endif %}
               </td>
 
               <td>
                 {% if u.is_admin %}
-                  <span class="badge">🛡️ Admin</span>
+                  <span class="badge">
+                    <i data-lucide="shield"></i>
+                    <span>Admin</span>
+                  </span>
                 {% else %}
-                  <span class="badge">👤 Usuario</span>
+                  <span class="badge">
+                    <i data-lucide="user"></i>
+                    <span>Usuario</span>
+                  </span>
                 {% endif %}
               </td>
 
@@ -130,12 +150,18 @@
 
               <td>
                 {% if current_user.id == u.id %}
-                  <div class="muted small">Tu cuenta</div>
+                  <div class="badge">
+                    <i data-lucide="badge-check"></i>
+                    <span>Tu cuenta</span>
+                  </div>
                 {% else %}
                   <div class="admin-actionpanel">
 
                     <details class="admin-details">
-                      <summary class="btn btn--ghost btn--small">✏️ Editar</summary>
+                      <summary class="btn btn--ghost btn--small">
+                        <i data-lucide="square-pen"></i>
+                        <span>Editar</span>
+                      </summary>
 
                       <form method="POST" action="{{ url_for('admin.update_user', user_id=u.id) }}" class="form form--compact">
                         <div class="form__row">
@@ -165,19 +191,29 @@
                           </label>
                         </div>
 
-                        <button class="btn btn--small" type="submit">Guardar</button>
+                        <button class="btn btn--small" type="submit">
+                          <i data-lucide="save"></i>
+                          <span>Guardar cambios</span>
+                        </button>
                       </form>
                     </details>
 
                     <details class="admin-details">
-                      <summary class="btn btn--ghost btn--small">🔑 Reset</summary>
+                      <summary class="btn btn--ghost btn--small">
+                        <i data-lucide="key-round"></i>
+                        <span>Reset contraseña</span>
+                      </summary>
 
                       <form method="POST" action="{{ url_for('admin.reset_password', user_id=u.id) }}" class="form form--compact">
                         <div class="form__row">
                           <label class="label">Nueva contraseña</label>
                           <input class="input" type="password" name="password" placeholder="mínimo 6 caracteres" required />
                         </div>
-                        <button class="btn btn--small" type="submit">Actualizar</button>
+
+                        <button class="btn btn--small" type="submit">
+                          <i data-lucide="refresh-cw"></i>
+                          <span>Actualizar contraseña</span>
+                        </button>
                       </form>
                     </details>
 
@@ -189,7 +225,13 @@
                         data-confirm-title="Confirmar"
                         data-confirm-ok="Sí, continuar"
                       >
-                        {% if u.is_active %}⛔ Desactivar{% else %}✅ Activar{% endif %}
+                        {% if u.is_active %}
+                          <i data-lucide="user-minus"></i>
+                          <span>Desactivar</span>
+                        {% else %}
+                          <i data-lucide="user-check"></i>
+                          <span>Activar</span>
+                        {% endif %}
                       </button>
                     </form>
 
@@ -201,7 +243,13 @@
                         data-confirm-title="Confirmar"
                         data-confirm-ok="Sí, continuar"
                       >
-                        {% if u.is_admin %}🧯 Quitar admin{% else %}🛡️ Hacer admin{% endif %}
+                        {% if u.is_admin %}
+                          <i data-lucide="shield-off"></i>
+                          <span>Quitar admin</span>
+                        {% else %}
+                          <i data-lucide="shield-plus"></i>
+                          <span>Hacer admin</span>
+                        {% endif %}
                       </button>
                     </form>
 
@@ -213,7 +261,8 @@
                         data-confirm-title="Eliminar usuario"
                         data-confirm-ok="Sí, eliminar"
                       >
-                        🗑️ Eliminar
+                        <i data-lucide="trash-2"></i>
+                        <span>Eliminar</span>
                       </button>
                     </form>
 
@@ -229,20 +278,32 @@
     <hr class="hr" />
 
     <div class="section-head">
-      <h2 class="h2">🏷️ Categorías</h2>
-      <div class="muted">Crea categorías para ordenar documentos.</div>
+      <h2 class="h2">Categorías</h2>
+      <div class="muted">Crea categorías para organizar mejor los documentos del repositorio.</div>
     </div>
 
     <div class="card admin-card mt">
       <div class="card__title">NUEVA CATEGORÍA</div>
 
       <form method="POST" action="{{ url_for('admin.create_category') }}" class="form form--compact">
-        <div class="form__grid" style="grid-template-columns: 1fr 220px;">
+        <div class="form__grid admin-category-grid">
           <div class="form__row">
-            <input class="input" name="name" placeholder="Ej: Contratos, Resoluciones, Actas..." required />
+            <label class="label" for="cat_name">Nombre de categoría</label>
+            <input
+              class="input"
+              id="cat_name"
+              name="name"
+              placeholder="Ej: Contratos, Resoluciones, Actas..."
+              required
+            />
           </div>
-          <div class="form__row">
-            <button class="btn" type="submit">Agregar</button>
+
+          <div class="form__row admin-category-submit">
+            <label class="label admin-label-placeholder">Acción</label>
+            <button class="btn" type="submit">
+              <i data-lucide="folder-plus"></i>
+              <span>Agregar categoría</span>
+            </button>
           </div>
         </div>
       </form>
@@ -256,10 +317,14 @@
                 <th>Acciones</th>
               </tr>
             </thead>
+
             <tbody>
               {% for c in categories %}
                 <tr>
-                  <td class="td-strong" title="{{ c.name }}"><span class="is-truncate">{{ c.name }}</span></td>
+                  <td class="td-strong" title="{{ c.name }}">
+                    <span class="is-truncate">{{ c.name }}</span>
+                  </td>
+
                   <td class="cats-actions">
                     <form method="POST" action="{{ url_for('admin.delete_category', cat_id=c.id) }}">
                       <button
@@ -269,7 +334,8 @@
                         data-confirm-title="Confirmar"
                         data-confirm-ok="Sí, eliminar"
                       >
-                        🗑️ Eliminar
+                        <i data-lucide="trash-2"></i>
+                        <span>Eliminar</span>
                       </button>
                     </form>
                   </td>
@@ -282,11 +348,21 @@
         <div class="callout mt">
           <div class="callout__text">
             <strong>Aún no hay categorías.</strong>
-            <div class="muted">Crea una para ordenar documentos.</div>
+            <div class="muted">Crea una para ordenar documentos del repositorio.</div>
           </div>
         </div>
       {% endif %}
     </div>
-
   </div>
+{% endblock %}
+
+{% block extra_scripts %}
+  {{ super() }}
+  <script>
+    window.addEventListener("DOMContentLoaded", () => {
+      if (window.lucide) {
+        window.lucide.createIcons();
+      }
+    });
+  </script>
 {% endblock %}

@@ -8,35 +8,49 @@
 {% block content %}
   <div class="page-head">
     <h1 class="h1">Mi calendario</h1>
-    <div class="page-sub">Conecta Google Calendar para crear recordatorios y ver vencimientos.</div>
+    <div class="page-sub">Conecta Google Calendar para sincronizar recordatorios, revisar eventos y gestionar vencimientos.</div>
   </div>
 
   <div class="card card--big">
     {% if not connected %}
       <div class="callout callout--warn">
         <div class="callout__text">
-          <div class="h2">Google Calendar no conectado</div>
+          <div class="h2" style="display:flex; align-items:center; gap:8px;">
+            <i data-lucide="calendar-x-2"></i>
+            <span>Google Calendar no conectado</span>
+          </div>
+
           <div class="muted">
-            Conéctalo para ver tus eventos y recordatorios en el dashboard.
+            Conéctalo para ver tus eventos, mostrar recordatorios en el dashboard y sincronizar vencimientos del sistema.
             {% if redirect_uri %}
-              <div style="margin-top:6px;">
+              <div style="margin-top:8px;">
                 <span class="muted">Redirect URI:</span>
-                <span style="font-weight:900;">{{ redirect_uri }}</span>
+                <span style="font-weight:900; word-break:break-word;">{{ redirect_uri }}</span>
               </div>
             {% endif %}
           </div>
         </div>
-        <a class="btn" href="{{ url_for('calendar.connect') }}">Conectar Google Calendar</a>
+
+        <a class="btn" href="{{ url_for('calendar.connect') }}">
+          <i data-lucide="link"></i>
+          <span>Conectar Google Calendar</span>
+        </a>
       </div>
     {% else %}
       <div class="callout callout--ok">
         <div class="callout__text">
-          <div class="h2">Google Calendar conectado</div>
-          <div class="muted">Ya puedes crear y ver eventos asociados a tu usuario.</div>
+          <div class="h2" style="display:flex; align-items:center; gap:8px;">
+            <i data-lucide="calendar-check-2"></i>
+            <span>Google Calendar conectado</span>
+          </div>
+          <div class="muted">Tu cuenta ya está vinculada. Puedes revisar eventos próximos y filtrar por rango de fechas.</div>
         </div>
 
         <form method="post" action="{{ url_for('calendar.disconnect') }}">
-          <button class="btn btn--ghost" type="submit">Desconectar</button>
+          <button class="btn btn--ghost" type="submit">
+            <i data-lucide="unlink"></i>
+            <span>Desconectar</span>
+          </button>
         </form>
       </div>
     {% endif %}
@@ -45,68 +59,126 @@
   <div style="height:12px;"></div>
 
   <div class="card">
+    <div class="section-head">
+      <h2 class="h2">Filtrar eventos</h2>
+      <div class="muted">Consulta eventos próximos o acota la vista por rango de fechas.</div>
+    </div>
+
     <form method="GET" class="toolbar">
       <div class="toolbar__left">
-        <div class="form__row" style="min-width:200px;">
-          <label class="label">Desde</label>
-          <input class="input" name="desde" value="{{ request.args.get('desde','') }}" data-date placeholder="dd-mm-aaaa">
+        <div class="form__row">
+          <label class="label" for="desde">Desde</label>
+          <input
+            class="input"
+            id="desde"
+            name="desde"
+            value="{{ request.args.get('desde','') }}"
+            data-date
+            placeholder="dd-mm-aaaa"
+          >
         </div>
-        <div class="form__row" style="min-width:200px;">
-          <label class="label">Hasta</label>
-          <input class="input" name="hasta" value="{{ request.args.get('hasta','') }}" data-date placeholder="dd-mm-aaaa">
+
+        <div class="form__row">
+          <label class="label" for="hasta">Hasta</label>
+          <input
+            class="input"
+            id="hasta"
+            name="hasta"
+            value="{{ request.args.get('hasta','') }}"
+            data-date
+            placeholder="dd-mm-aaaa"
+          >
         </div>
       </div>
+
       <div class="toolbar__right">
-        <button class="btn btn--ghost" type="submit">Filtrar</button>
+        <button class="btn btn--ghost" type="submit">
+          <i data-lucide="filter"></i>
+          <span>Filtrar</span>
+        </button>
       </div>
     </form>
 
-    <div class="help">
-      Este módulo usa OAuth real. Próximo paso recomendado: crear automáticamente “📌 Subir: …” al subir documentos con fecha.
+    <div class="help" style="display:flex; align-items:flex-start; gap:8px;">
+      <i data-lucide="info"></i>
+      <span>Este módulo usa OAuth real con Google Calendar. Próximo paso recomendado: generar automáticamente eventos “📌 Subir: …” al registrar documentos con fecha límite.</span>
     </div>
   </div>
 
   <div style="height:12px;"></div>
 
   <div class="card">
-    <div class="h2">Eventos</div>
-    <div class="muted" style="margin-top:6px;">Eventos próximos (o del rango filtrado).</div>
+    <div class="section-head">
+      <h2 class="h2">Eventos</h2>
+      <div class="muted">Eventos próximos o correspondientes al rango filtrado.</div>
+    </div>
 
     <div style="height:12px;"></div>
 
     {% if not connected %}
-      <div class="center" style="padding: 16px;">
-        <div class="muted">Conecta Google Calendar para cargar eventos.</div>
+      <div class="callout">
+        <div class="callout__text">
+          <strong style="display:flex; align-items:center; gap:8px;">
+            <i data-lucide="calendar-off"></i>
+            <span>Sin conexión activa</span>
+          </strong>
+          <div class="muted">Conecta Google Calendar para cargar y visualizar tus eventos.</div>
+        </div>
       </div>
     {% else %}
       {% if events and events|length %}
-        <table class="table">
-          <thead>
-            <tr>
-              <th>Cuándo</th>
-              <th>Título</th>
-              <th>Link</th>
-            </tr>
-          </thead>
-          <tbody>
-            {% for e in events %}
+        <div class="table-wrap">
+          <table class="table table--calendar">
+            <thead>
               <tr>
-                <td>{{ e.when or "—" }}</td>
-                <td style="font-weight:900;">{{ e.summary or "(sin título)" }}</td>
-                <td>
-                  {% if e.link %}
-                    <a class="btn btn--ghost btn--small" href="{{ e.link }}" target="_blank" rel="noopener">Abrir</a>
-                  {% else %}
-                    —
-                  {% endif %}
-                </td>
+                <th>Cuándo</th>
+                <th>Título</th>
+                <th>Link</th>
               </tr>
-            {% endfor %}
-          </tbody>
-        </table>
+            </thead>
+
+            <tbody>
+              {% for e in events %}
+                <tr>
+                  <td title="{{ e.when or '' }}">
+                    <span class="badge badge--ok">
+                      <i data-lucide="calendar-range"></i>
+                      <span>{{ e.when or "—" }}</span>
+                    </span>
+                  </td>
+
+                  <td title="{{ e.summary or '' }}">
+                    <div class="td-strong is-truncate">{{ e.summary or "(sin título)" }}</div>
+                    <div class="help" style="margin-top:6px; display:flex; align-items:center; gap:6px;">
+                      <i data-lucide="bell-ring"></i>
+                      <span>Evento sincronizado desde Google Calendar</span>
+                    </div>
+                  </td>
+
+                  <td>
+                    {% if e.link %}
+                      <a class="btn btn--ghost btn--small" href="{{ e.link }}" target="_blank" rel="noopener">
+                        <i data-lucide="external-link"></i>
+                        <span>Abrir</span>
+                      </a>
+                    {% else %}
+                      <span class="muted">—</span>
+                    {% endif %}
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
       {% else %}
-        <div class="center" style="padding: 16px;">
-          <div class="muted">Sin eventos para el rango seleccionado.</div>
+        <div class="callout">
+          <div class="callout__text">
+            <strong style="display:flex; align-items:center; gap:8px;">
+              <i data-lucide="inbox"></i>
+              <span>Sin eventos para mostrar</span>
+            </strong>
+            <div class="muted">No hay eventos para el rango seleccionado o no existen eventos próximos disponibles.</div>
+          </div>
         </div>
       {% endif %}
     {% endif %}
@@ -118,8 +190,17 @@
   <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/es.js"></script>
   <script>
     window.addEventListener("DOMContentLoaded", () => {
-      const opts = { locale: "es", dateFormat: "d-m-Y", allowInput: true };
+      const opts = {
+        locale: "es",
+        dateFormat: "d-m-Y",
+        allowInput: true
+      };
+
       document.querySelectorAll("[data-date]").forEach((el) => flatpickr(el, opts));
+
+      if (window.lucide) {
+        window.lucide.createIcons();
+      }
     });
   </script>
 {% endblock %}
