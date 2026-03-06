@@ -1,100 +1,66 @@
-# Repositorio Intranet Municunco (Privado Municipal)
+📂 Intranet Municunco — Repositorio de Documentos
 
-Sistema interno de la Municipalidad de Cunco para gestión de documentos y recordatorios por usuario.
+Sistema interno de gestión documental desarrollado para la Municipalidad de Cunco, diseñado para centralizar archivos institucionales, organizar documentos por categorías y gestionar recordatorios asociados a usuarios mediante integración con Google Calendar.
 
-Proyecto desarrollado en Flask, con arquitectura modular basada en blueprints y preparado para trabajar con SQLite en desarrollo y PostgreSQL en entorno productivo municipal.
+El sistema está desarrollado en Flask (Python) con arquitectura modular basada en Blueprints, utilizando PostgreSQL como base de datos principal y preparado para ejecutarse dentro de la infraestructura interna municipal.
 
----
+📊 Estado del Proyecto
+Módulo	Estado
+Autenticación (Login / Logout)	✅ Implementado
+Dashboard con estadísticas	✅ Implementado
+Gestión de documentos	✅ Implementado
+Subida de archivos	✅ Implementado
+Sistema de recordatorios	✅ Implementado
+Integración Google Calendar	✅ Implementado
+Panel de administración	🟡 Base funcional
+🧰 Stack Tecnológico
+Backend
 
-## Estado Actual
+Python 3.12+
 
-- ✅ Autenticación (Login / Logout)
-- ✅ Dashboard con estadísticas generales
-- ✅ Módulo Documentos (explorar y subir archivos)
-- ✅ Módulo Admin (base funcional)
-- ✅ UI unificada (base.html + base.css + base.js)
-- 🟡 Integración Google Calendar (OAuth 2.0) pendiente credenciales oficiales
+Flask
 
----
+SQLAlchemy
 
-## Stack Tecnológico
+Flask-Login
 
-- Python 3.12+
-- Flask
-- SQLAlchemy
-- SQLite (entorno desarrollo actual)
-- PostgreSQL 16+ (planificado para producción)
-- Google Calendar API (OAuth 2.0)
+Flask-WTF
 
----
+Base de Datos
 
-## Entornos
+PostgreSQL 16+
 
-### Desarrollo (Actual)
-- Base de datos: SQLite (`local.db`)
-- URL local: http://127.0.0.1:5000
-- Sistema operativo: Windows
+Frontend
 
-### Producción (Planificado)
-- Base de datos: PostgreSQL 16+
-- Servidor: Ubuntu Server (infraestructura municipal)
-- Acceso vía HTTPS
+HTML5
 
----
+CSS modular (base.css + pages.css)
 
-## Instalación (Desarrollo Local)
+JavaScript Vanilla
 
-### 1️⃣ Crear entorno virtual
+Lucide Icons
 
-python -m venv venv  
-venv\Scripts\activate  
-pip install -r requirements.txt  
+Integraciones
 
-### 2️⃣ Configurar variables de entorno
+Google Calendar API
 
-Crear archivo `.env` en la raíz del proyecto (NO se versiona).  
-Basarse en `.env.example`.
+OAuth 2.0
 
-### 3️⃣ Ejecutar aplicación
+🏗 Arquitectura
 
-python run.py  
-
-Acceder en navegador:
-
-http://127.0.0.1:5000/auth/login
-
----
-
-## Variables de Entorno
-
-El proyecto utiliza un archivo `.env` con las siguientes variables:
-
-- SECRET_KEY
-- FLASK_ENV
-- FLASK_DEBUG
-- DATABASE_URL
-- UPLOAD_DIR
-- ADMIN_EMAIL
-- ADMIN_PASSWORD
-- GOOGLE_CLIENT_ID
-- GOOGLE_CLIENT_SECRET
-- GOOGLE_REDIRECT_URI
-- APP_TIMEZONE
-
-⚠️ El archivo `.env` NO debe subirse al repositorio.
-
----
-
-## Estructura del Proyecto
+El proyecto utiliza Flask Blueprints para separar cada módulo funcional del sistema.
 
 app/
- ├── admin/
- ├── auth/
- ├── documents/
- ├── calendar_bp/
+ ├── admin/              # Panel administrativo
+ ├── auth/               # Autenticación de usuarios
+ ├── documents/          # Gestión de documentos
+ ├── calendar_bp/        # Integración Google Calendar
  ├── static/
  │    ├── css/
+ │    │     ├── base.css
+ │    │     └── pages.css
  │    └── js/
+ │          └── base.js
  ├── templates/
  │    ├── admin/
  │    ├── auth/
@@ -103,58 +69,180 @@ app/
  │    ├── base.html
  │    └── dashboard.html
  ├── models.py
+ ├── extensions.py
  ├── config.py
- └── extensions.py
+ └── __init__.py
 
-instance/      (no versionado)
-uploads/       (no versionado)
+instance/        # Archivos de instancia (no versionado)
+uploads/         # Documentos subidos por usuarios (no versionado)
+
 run.py
 requirements.txt
+⚙️ Entornos
+Desarrollo
 
----
+Base de datos: PostgreSQL
 
-## Seguridad y Buenas Prácticas
+URL local:
+
+http://127.0.0.1:5000
+
+Sistema operativo actual: Windows
+
+Producción
+
+Base de datos: PostgreSQL 16+
+
+Sistema operativo: Ubuntu Server
+
+Infraestructura: Servidor interno municipal
+
+Acceso: HTTPS
+
+🚀 Instalación (Entorno Local)
+1️⃣ Clonar repositorio
+git clone <url-del-repositorio>
+cd repositorio_intranet_municunco
+2️⃣ Crear entorno virtual
+python -m venv venv
+
+Activar entorno virtual:
+
+Windows
+
+venv\Scripts\activate
+
+Linux / Mac
+
+source venv/bin/activate
+3️⃣ Instalar dependencias
+pip install -r requirements.txt
+4️⃣ Configurar variables de entorno
+
+Crear archivo:
+
+.env
+
+Basarse en:
+
+.env.example
+5️⃣ Ejecutar aplicación
+python run.py
+
+Abrir navegador:
+
+http://127.0.0.1:5000/auth/login
+🔐 Variables de Entorno
+
+El sistema utiliza variables definidas en .env.
+
+Ejemplo:
+
+SECRET_KEY=
+
+FLASK_ENV=development
+FLASK_DEBUG=1
+
+DATABASE_URL=postgresql://usuario:password@localhost:5432/municunco_db
+
+UPLOAD_DIR=uploads
+
+ADMIN_EMAIL=
+ADMIN_PASSWORD=
+
+GOOGLE_CLIENT_ID=
+GOOGLE_CLIENT_SECRET=
+GOOGLE_REDIRECT_URI=
+
+APP_TIMEZONE=America/Santiago
+
+⚠️ El archivo .env nunca debe subirse al repositorio.
+
+📂 Gestión de Archivos
+
+Los documentos subidos por los usuarios se almacenan en:
+
+uploads/
+
+Estructura típica:
+
+uploads/
+ ├── documents/
+ └── generated/
+
+Este directorio no se versiona en Git.
+
+🔒 Seguridad
 
 Este repositorio es privado y de uso interno municipal.
 
-No se versionan:
-- `.env`
-- `instance/`
-- `uploads/`
-- bases locales (`*.db`)
-- credenciales OAuth
+No se versionan los siguientes elementos:
 
-El acceso al repositorio se gestiona mediante invitación en GitHub.
+.env
+instance/
+uploads/
+*.db
+credenciales OAuth
 
----
+El acceso al repositorio se gestiona mediante invitación privada en GitHub.
 
-## Convención de Commits
+🧪 Buenas Prácticas del Proyecto
 
-- feat: nueva funcionalidad
-- fix: corrección de error
-- style: cambios visuales
-- refactor: reorganización interna
-- docs: documentación
+El sistema fue desarrollado siguiendo principios de mantenibilidad:
+
+Arquitectura modular mediante Flask Blueprints
+
+Separación clara entre backend y frontend
+
+Configuración mediante variables de entorno
+
+Preparado para infraestructura on-premise municipal
+
+Código estructurado para mantenimiento institucional
+
+🧾 Convención de Commits
+
+Formato utilizado:
+
+tipo: descripción
+
+Tipos de commit utilizados:
+
+Tipo	Uso
+feat	nueva funcionalidad
+fix	corrección de error
+style	cambios visuales
+refactor	reorganización interna
+docs	documentación
 
 Ejemplos:
-feat: agregar conexión Google Calendar por usuario  
-style: unificar layout base y sidebar  
-fix: corregir callback OAuth  
 
----
+feat: agregar integración Google Calendar
+feat: implementar sistema de recordatorios por usuario
+style: mejorar layout dashboard
+fix: corregir callback OAuth Google
+docs: actualizar README del proyecto
+📅 Próximos Objetivos
 
-## Próximos Objetivos
+Mejoras en el panel administrativo
 
-- Migración definitiva a PostgreSQL
-- Configuración HTTPS en producción
-- Control de permisos más granular
-- Auditoría de acciones
+Sistema de permisos más granular
 
----
+Registro de auditoría de acciones
 
-## Responsable
+Optimización para infraestructura municipal
 
-Desarrollador: Marcelo Montoya Mellado  
-Unidad de Informática  
-Municipalidad de Cunco  
+Mejoras de rendimiento y escalabilidad
+
+👨‍💻 Responsable del Proyecto
+
+Marcelo Montoya Mellado
+Unidad de Informática
+Municipalidad de Cunco
+
 Año: 2026
+
+📄 Licencia
+
+Proyecto de uso interno institucional.
+No destinado para distribución pública.
