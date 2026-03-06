@@ -72,7 +72,7 @@
             class="input"
             id="desde"
             name="desde"
-            value="{{ request.args.get('desde','') }}"
+            value="{{ request.args.get('desde', '') }}"
             data-date
             placeholder="dd-mm-aaaa"
           >
@@ -84,7 +84,7 @@
             class="input"
             id="hasta"
             name="hasta"
-            value="{{ request.args.get('hasta','') }}"
+            value="{{ request.args.get('hasta', '') }}"
             data-date
             placeholder="dd-mm-aaaa"
           >
@@ -101,7 +101,7 @@
 
     <div class="help" style="display:flex; align-items:flex-start; gap:8px;">
       <i data-lucide="info"></i>
-      <span>Este módulo usa OAuth real con Google Calendar. Próximo paso recomendado: generar automáticamente eventos “📌 Subir: …” al registrar documentos con fecha límite.</span>
+      <span>Los vencimientos de documentos se sincronizan automáticamente con Google Calendar al registrar una fecha límite.</span>
     </div>
   </div>
 
