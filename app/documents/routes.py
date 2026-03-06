@@ -32,16 +32,6 @@ from .forms import FillOficioForm
 # =========================================================
 # Config de plantillas de Oficios (multi-plantilla)
 # =========================================================
-# - key: valor del select
-# - filename: DOCX en uploads/templates
-# - display_name: nombre amigable
-# - fields: campos visibles/requeridos para esta plantilla
-# - mapping: placeholders -> campo del form
-#
-# Para agregar otra plantilla:
-# 1) Copias el DOCX a uploads/templates
-# 2) Agregas otra entrada aquí
-# 3) Listo (el front oculta/muestra campos y el back genera)
 OFICIO_TEMPLATES: dict[str, dict] = {
     "oficio_respuesta": {
         "display_name": "Oficio Respuesta",
@@ -376,10 +366,8 @@ def _build_oficio_defs_for_front() -> dict[str, dict]:
 
 
 def _setup_oficio_form_choices(form: FillOficioForm) -> None:
-    # Tipos de oficio
     form.oficio_tipo.choices = [(k, v["display_name"]) for k, v in OFICIO_TEMPLATES.items()]
 
-    # Categorías para guardar
     cats = Category.query.order_by(Category.name.asc()).all()
     form.category_id.choices = [(0, "— Selecciona una categoría —")] + [(c.id, c.name) for c in cats]
 
@@ -419,6 +407,36 @@ def dashboard():
         .count()
     )
 
+    deadlines_7d: list[dict[str, str | None]] = []
+
+    if gc_connected:
+        try:
+            from app.calendar_bp.google_service import list_events_range  # type: ignore
+
+            start_dt = datetime.combine(today, time.min)
+            end_dt = datetime.combine(until, time.max)
+
+            raw_events = list_events_range(
+                user_id=current_user.id,
+                start_dt=start_dt,
+                end_dt=end_dt,
+                max_results=50,
+            )
+
+            deadlines_7d = [
+                {
+                    "id": ev.get("id"),
+                    "summary": ev.get("summary") or "(sin título)",
+                    "when": ev.get("when") or "—",
+                    "link": ev.get("link"),
+                }
+                for ev in raw_events[:8]
+            ]
+
+        except Exception as e:
+            current_app.logger.warning("Dashboard calendar fetch failed: %s", e)
+            deadlines_7d = []
+
     return render_template(
         "dashboard.html",
         total_docs=total_docs,
@@ -428,6 +446,7 @@ def dashboard():
         gc_connected=gc_connected,
         due_soon_docs=due_soon_docs,
         overdue_count=overdue_count,
+        deadlines_7d=deadlines_7d,
     )
 
 
@@ -651,11 +670,9 @@ def oficio():
     form = FillOficioForm()
     _setup_oficio_form_choices(form)
 
-    # Tipo por defecto: primero del dict
     default_key = next(iter(OFICIO_TEMPLATES.keys()))
     form.oficio_tipo.data = default_key
 
-    # Defaults demo (puedes quitarlo si quieres)
     form.numero_solicitud.data = "MU071T0001762"
     form.fecha_solicitud.data = "20-01-2026"
     form.de_nombre.data = "NELSON OLIVERA STAUB"
@@ -708,14 +725,12 @@ def oficio_post():
         flash(f"No se encontró la plantilla seleccionada en: {tpl_path}", "danger")
         return redirect(url_for("documents.oficio"))
 
-    # Construir mapping (placeholders -> texto final)
     mapping: dict[str, str] = {}
 
     for placeholder, field_name in (tpl_def.get("mapping") or {}).items():
         val = getattr(form, field_name).data if hasattr(form, field_name) else ""
         val = (val or "").strip()
 
-        # Normaliza fecha a dd/mm/aaaa para el DOCX
         if field_name == "fecha_solicitud":
             val = _ddmmyyyy_to_slash(val)
 
@@ -737,7 +752,6 @@ def oficio_post():
 
             _docx_replace_text(d, mapping)
 
-            # Si tu plantilla usa estos placeholders, aplica negrita (seguro)
             _docx_force_bold_placeholders(
                 d,
                 keys={"{{DE_NOMBRE}}", "{{DE_CARGO}}", "{{A_NOMBRE}}"},
