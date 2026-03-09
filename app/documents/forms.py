@@ -51,8 +51,6 @@ class FillOficioForm(FlaskForm):
 
     guardar_pdf = BooleanField("Guardar PDF en el repositorio")
 
-    # Categoría para guardado (solo si guardar_pdf=True)
-    # - coerce=int para que venga como int desde el select
     category_id = SelectField(
         "Categoría para guardar",
         coerce=int,
@@ -66,9 +64,34 @@ class FillOficioForm(FlaskForm):
             return False
 
         if bool(self.guardar_pdf.data):
-            # 0 => "— Selecciona —"
             if int(self.category_id.data or 0) == 0:
                 self.category_id.errors.append("Selecciona una categoría para guardar el PDF.")
                 return False
 
         return True
+
+
+class DocumentEditForm(FlaskForm):
+    name = StringField(
+        "Nombre del documento",
+        validators=[DataRequired(), Length(min=1, max=160)],
+    )
+
+    category_id = SelectField(
+        "Categoría",
+        coerce=int,
+        choices=[],
+        validators=[Optional()],
+        description="Puedes dejar el documento sin categoría.",
+    )
+
+    due_date = StringField(
+        "Fecha límite",
+        validators=[Optional(), Length(max=12)],
+        description="Formato dd-mm-aaaa. Déjalo vacío si no aplica.",
+    )
+
+    note = TextAreaField(
+        "Observación interna",
+        validators=[Optional(), Length(max=1000)],
+    )

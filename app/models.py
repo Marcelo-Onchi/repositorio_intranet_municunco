@@ -40,7 +40,7 @@ class User(db.Model, UserMixin):
         back_populates="uploaded_by",
         lazy="select",
         cascade="all, delete-orphan",
-        passive_deletes=True,  # ✅ respeta ON DELETE en DB (mejor para Postgres)
+        passive_deletes=True,
     )
 
     google_token = db.relationship(
@@ -49,7 +49,7 @@ class User(db.Model, UserMixin):
         uselist=False,
         lazy="select",
         cascade="all, delete-orphan",
-        passive_deletes=True,  # ✅ respeta ON DELETE CASCADE
+        passive_deletes=True,
     )
 
     def set_password(self, raw: str) -> None:
@@ -80,6 +80,8 @@ class Document(db.Model):
         db.CheckConstraint("file_size >= 0", name="ck_document_file_size_nonneg"),
         db.Index("ix_document_category_id", "category_id"),
         db.Index("ix_document_uploaded_by_id", "uploaded_by_id"),
+        db.Index("ix_document_created_at", "created_at"),
+        db.Index("ix_document_due_date", "due_date"),
     )
 
     id = db.Column(db.Integer, primary_key=True)
@@ -90,22 +92,32 @@ class Document(db.Model):
     file_size = db.Column(db.Integer, default=0, nullable=False)
 
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
-
-    due_date = db.Column(db.Date, nullable=True, index=True)
+    due_date = db.Column(db.Date, nullable=True)
 
     category_id = db.Column(
         db.Integer,
         db.ForeignKey("category.id", ondelete="SET NULL"),
         nullable=True,
     )
-    category = db.relationship("Category", back_populates="documents", lazy="joined")
+    category = db.relationship(
+        "Category",
+        back_populates="documents",
+        lazy="joined",
+    )
 
     uploaded_by_id = db.Column(
         db.Integer,
         db.ForeignKey("user.id", ondelete="CASCADE"),
         nullable=False,
     )
-    uploaded_by = db.relationship("User", back_populates="documents", lazy="joined")
+    uploaded_by = db.relationship(
+        "User",
+        back_populates="documents",
+        lazy="joined",
+    )
+
+    def __repr__(self) -> str:
+        return f"<Document id={self.id} filename={self.filename!r}>"
 
 
 class GoogleToken(db.Model):
@@ -113,6 +125,7 @@ class GoogleToken(db.Model):
     Token OAuth Google por usuario (Calendar).
     Guardamos refresh_token para poder renovar access_token.
     """
+
     __tablename__ = "google_token"
 
     id = db.Column(db.Integer, primary_key=True)
@@ -124,7 +137,11 @@ class GoogleToken(db.Model):
         index=True,
         nullable=False,
     )
-    user = db.relationship("User", back_populates="google_token", lazy="joined")
+    user = db.relationship(
+        "User",
+        back_populates="google_token",
+        lazy="joined",
+    )
 
     access_token = db.Column(db.Text, nullable=False)
     refresh_token = db.Column(db.Text, nullable=True)
@@ -139,3 +156,6 @@ class GoogleToken(db.Model):
         onupdate=datetime.utcnow,
         nullable=False,
     )
+
+    def __repr__(self) -> str:
+        return f"<GoogleToken user_id={self.user_id}>"

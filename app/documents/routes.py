@@ -9,7 +9,6 @@ import tempfile
 import time as time_mod
 from datetime import date, datetime, time, timedelta
 from pathlib import Path
-from typing import Optional
 from uuid import uuid4
 
 from docx import Document as DocxDocument
@@ -26,7 +25,7 @@ from app.utils.dates import (
     parse_datetime_ddmmyyyy as _parse_date_ddmmyyyy,
 )
 from . import bp
-from .forms import FillOficioForm
+from .forms import DocumentEditForm, FillOficioForm
 
 
 # =========================================================
@@ -372,6 +371,24 @@ def _setup_oficio_form_choices(form: FillOficioForm) -> None:
     form.category_id.choices = [(0, "— Selecciona una categoría —")] + [(c.id, c.name) for c in cats]
 
 
+def _setup_document_edit_form_choices(form: DocumentEditForm) -> None:
+    cats = Category.query.order_by(Category.name.asc()).all()
+    form.category_id.choices = [(0, "— Sin categoría —")] + [(c.id, c.name) for c in cats]
+
+
+def _delete_document_file(doc: Document) -> None:
+    path = Path(doc.path or "")
+    try:
+        if path.exists() and path.is_file():
+            path.unlink()
+    except Exception as ex:
+        current_app.logger.warning("No se pudo eliminar archivo físico del documento %s: %s", doc.id, ex)
+
+
+def _can_manage_documents() -> bool:
+    return bool(current_user.is_admin)
+
+
 # =========================================================
 # Rutas
 # =========================================================
@@ -520,6 +537,7 @@ def index():
         hasta=hasta_raw,
         due_status=due_status,
         sort=sort,
+        can_manage_docs=_can_manage_documents(),
     )
 
 
@@ -610,6 +628,56 @@ def upload_post():
     return redirect(url_for("documents.index"))
 
 
+@bp.get("/edit/<int:doc_id>")
+@login_required
+def edit(doc_id: int):
+    if not _can_manage_documents():
+        abort(403)
+
+    doc = Document.query.get_or_404(doc_id)
+
+    form = DocumentEditForm()
+    _setup_document_edit_form_choices(form)
+
+    form.name.data = doc.name or ""
+    form.category_id.data = doc.category_id or 0
+    form.due_date.data = doc.due_date.strftime("%d-%m-%Y") if doc.due_date else ""
+    form.note.data = ""
+
+    return render_template("documents/edit.html", form=form, doc=doc)
+
+
+@bp.post("/edit/<int:doc_id>")
+@login_required
+def edit_post(doc_id: int):
+    if not _can_manage_documents():
+        abort(403)
+
+    doc = Document.query.get_or_404(doc_id)
+
+    form = DocumentEditForm()
+    _setup_document_edit_form_choices(form)
+
+    if not form.validate_on_submit():
+        return render_template("documents/edit.html", form=form, doc=doc), 400
+
+    due_raw = (form.due_date.data or "").strip()
+    due = _parse_due_date_date(due_raw)
+
+    if due_raw and not due:
+        form.due_date.errors.append("Ingresa una fecha válida en formato dd-mm-aaaa.")
+        return render_template("documents/edit.html", form=form, doc=doc), 400
+
+    doc.name = (form.name.data or "").strip()[:160]
+    doc.category_id = int(form.category_id.data or 0) or None
+    doc.due_date = due
+
+    db.session.commit()
+
+    flash("Documento actualizado correctamente.", "success")
+    return redirect(url_for("documents.index"))
+
+
 @bp.get("/preview/<int:doc_id>")
 @login_required
 def preview(doc_id: int):
@@ -641,22 +709,61 @@ def download(doc_id: int):
 @bp.post("/delete/<int:doc_id>")
 @login_required
 def delete(doc_id: int):
-    if not current_user.is_admin:
+    if not _can_manage_documents():
         abort(403)
 
     doc = Document.query.get_or_404(doc_id)
-    path = Path(doc.path)
 
     db.session.delete(doc)
     db.session.commit()
 
-    try:
-        if path.exists():
-            path.unlink()
-    except Exception:
-        pass
+    _delete_document_file(doc)
 
     flash("Documento eliminado.", "success")
+    return redirect(url_for("documents.index"))
+
+
+@bp.post("/delete-many")
+@login_required
+def delete_many():
+    if not _can_manage_documents():
+        abort(403)
+
+    raw_ids = request.form.getlist("doc_ids")
+    doc_ids: list[int] = []
+
+    for raw in raw_ids:
+        raw = (raw or "").strip()
+        if raw.isdigit():
+            value = int(raw)
+            if value > 0:
+                doc_ids.append(value)
+
+    doc_ids = list(dict.fromkeys(doc_ids))
+
+    if not doc_ids:
+        flash("Selecciona al menos un documento para eliminar.", "warning")
+        return redirect(url_for("documents.index"))
+
+    docs = Document.query.filter(Document.id.in_(doc_ids)).all()
+    if not docs:
+        flash("No se encontraron documentos válidos para eliminar.", "warning")
+        return redirect(url_for("documents.index"))
+
+    deleted_count = 0
+    deleted_files: list[Document] = []
+
+    for doc in docs:
+        deleted_files.append(doc)
+        db.session.delete(doc)
+        deleted_count += 1
+
+    db.session.commit()
+
+    for doc in deleted_files:
+        _delete_document_file(doc)
+
+    flash(f"Se eliminaron {deleted_count} documento(s) correctamente.", "success")
     return redirect(url_for("documents.index"))
 
 

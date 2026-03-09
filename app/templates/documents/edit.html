@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+{% block title %}Editar documento{% endblock %}
+
+{% block extra_head %}
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+{% endblock %}
+
+{% block content %}
+  <div class="page-head">
+    <h1 class="h1">Editar documento</h1>
+    <div class="page-sub">Actualiza nombre, categoría y fecha límite del documento seleccionado.</div>
+  </div>
+
+  <div class="card card--big" style="max-width: 860px;">
+    <div class="badge" style="margin-bottom:14px;">
+      <i data-lucide="file-text"></i>
+      <span>{{ doc.filename }}</span>
+    </div>
+
+    <form method="POST" action="{{ url_for('documents.edit_post', doc_id=doc.id) }}" class="form">
+      {{ form.hidden_tag() }}
+
+      <div class="form__row">
+        <label class="label" for="{{ form.name.id }}">{{ form.name.label.text }}</label>
+        {{ form.name(class="input", placeholder="Nombre visible del documento") }}
+        {% if form.name.errors %}
+          <div class="help" style="color:#dc2626;">{{ form.name.errors[0] }}</div>
+        {% endif %}
+      </div>
+
+      <div class="form__row">
+        <label class="label" for="{{ form.category_id.id }}">{{ form.category_id.label.text }}</label>
+        {{ form.category_id(class="input") }}
+        <div class="help">Puedes cambiar la categoría o dejar el documento sin categoría.</div>
+        {% if form.category_id.errors %}
+          <div class="help" style="color:#dc2626;">{{ form.category_id.errors[0] }}</div>
+        {% endif %}
+      </div>
+
+      <div class="form__row">
+        <label class="label" for="{{ form.due_date.id }}">{{ form.due_date.label.text }}</label>
+        {{ form.due_date(class="input", **{"data-date": "1", "placeholder": "dd-mm-aaaa"}) }}
+        <div class="help">Déjalo vacío si el documento no tiene fecha límite.</div>
+        {% if form.due_date.errors %}
+          <div class="help" style="color:#dc2626;">{{ form.due_date.errors[0] }}</div>
+        {% endif %}
+      </div>
+
+      <div class="form__row">
+        <label class="label">Archivo original</label>
+        <div class="input" style="display:flex; align-items:center; min-height:44px; background:#f8fafc;">
+          {{ doc.filename }}
+        </div>
+      </div>
+
+      <div class="form__actions" style="display:flex; gap:10px; flex-wrap:wrap; margin-top:18px;">
+        <button class="btn" type="submit">
+          <i data-lucide="save"></i>
+          <span>Guardar cambios</span>
+        </button>
+
+        <a class="btn btn--ghost" href="{{ url_for('documents.index') }}">
+          <i data-lucide="arrow-left"></i>
+          <span>Volver</span>
+        </a>
+      </div>
+    </form>
+  </div>
+{% endblock %}
+
+{% block extra_scripts %}
+  <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+  <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/es.js"></script>
+  <script>
+    window.addEventListener("DOMContentLoaded", () => {
+      document.querySelectorAll("[data-date]").forEach((el) => {
+        flatpickr(el, {
+          locale: "es",
+          dateFormat: "d-m-Y",
+          allowInput: true
+        });
+      });
+
+      if (window.lucide) {
+        window.lucide.createIcons();
+      }
+    });
+  </script>
+{% endblock %}
