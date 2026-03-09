@@ -8,9 +8,14 @@ __pycache__/
 *.log
 
 # ================================
-# Entorno virtual
+# Entornos virtuales
 # ================================
 venv/
+.venv/
+
+# ================================
+# Variables de entorno
+# ================================
 .env
 .env.*
 
@@ -23,7 +28,7 @@ instance/*
 !instance/uploads/templates/oficio_respuesta_template_v1.docx
 
 # ================================
-# Uploads (archivos generados)
+# Uploads
 # ================================
 uploads/*
 !uploads/templates/
@@ -37,7 +42,7 @@ uploads/*
 *.sqlite3
 
 # ================================
-# Archivos temporales
+# Temporales / respaldo
 # ================================
 *.tmp
 *.bak

@@ -1,8 +1,8 @@
-# app/calendar_bp/routes.py
 from __future__ import annotations
 
 import secrets
 from datetime import datetime, timedelta
+from urllib.parse import urlencode
 
 import requests
 from flask import current_app, flash, redirect, render_template, request, session, url_for
@@ -29,6 +29,7 @@ def index():
 
     if hasta < desde:
         desde, hasta = hasta, desde
+
     hasta = hasta.replace(hour=23, minute=59, second=59, microsecond=0)
 
     events: list[dict] = []
@@ -37,10 +38,10 @@ def index():
             from .google_service import list_events_range
 
             events = list_events_range(current_user.id, desde, hasta, max_results=100)
-            current_app.logger.info("Calendar list OK: %s event(s)", len(events))
+            current_app.logger.info("Calendar list OK: %s evento(s)", len(events))
         except Exception as ex:
             current_app.logger.exception("Calendar reminder list failed: %s", ex)
-            flash("No se pudieron cargar eventos desde Google Calendar (revisa consola).", "warning")
+            flash("No se pudieron cargar eventos desde Google Calendar.", "warning")
             events = []
 
     return render_template(
@@ -59,17 +60,19 @@ def connect():
     client_id = (current_app.config.get("GOOGLE_CLIENT_ID") or "").strip()
     client_secret = (current_app.config.get("GOOGLE_CLIENT_SECRET") or "").strip()
     redirect_uri = (current_app.config.get("GOOGLE_REDIRECT_URI") or "").strip()
-    scopes = current_app.config.get("GOOGLE_SCOPES") or ["https://www.googleapis.com/auth/calendar.events"]
+    scopes = current_app.config.get("GOOGLE_SCOPES") or [
+        "https://www.googleapis.com/auth/calendar.events"
+    ]
 
     if not client_id or not client_secret or not redirect_uri:
-        flash("Falta configurar GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET / GOOGLE_REDIRECT_URI.", "danger")
+        flash(
+            "Falta configurar GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET o GOOGLE_REDIRECT_URI.",
+            "danger",
+        )
         return redirect(url_for("calendar.index"))
 
-    # ✅ OAuth CSRF protection: state
     state = secrets.token_urlsafe(24)
     session["google_oauth_state"] = state
-
-    from urllib.parse import urlencode
 
     params = {
         "client_id": client_id,
@@ -81,23 +84,23 @@ def connect():
         "include_granted_scopes": "true",
         "state": state,
     }
-    url = "https://accounts.google.com/o/oauth2/v2/auth?" + urlencode(params)
-    return redirect(url)
+
+    auth_url = "https://accounts.google.com/o/oauth2/v2/auth?" + urlencode(params)
+    return redirect(auth_url)
 
 
 @bp.get("/callback")
 @login_required
 def callback():
-    err = (request.args.get("error") or "").strip()
-    if err:
-        flash(f"Google OAuth cancelado o falló: {err}", "warning")
+    error = (request.args.get("error") or "").strip()
+    if error:
+        flash(f"Google OAuth cancelado o falló: {error}", "warning")
         return redirect(url_for("calendar.index"))
 
-    # ✅ Validar state (CSRF)
     state_in = (request.args.get("state") or "").strip()
     state_expected = (session.pop("google_oauth_state", "") or "").strip()
     if not state_in or not state_expected or state_in != state_expected:
-        flash("OAuth inválido (state no coincide). Reintenta conectar Google Calendar.", "danger")
+        flash("OAuth inválido: el parámetro state no coincide.", "danger")
         return redirect(url_for("calendar.index"))
 
     code = (request.args.get("code") or "").strip()
@@ -109,6 +112,10 @@ def callback():
     client_secret = (current_app.config.get("GOOGLE_CLIENT_SECRET") or "").strip()
     redirect_uri = (current_app.config.get("GOOGLE_REDIRECT_URI") or "").strip()
 
+    if not client_id or not client_secret or not redirect_uri:
+        flash("La configuración de Google OAuth está incompleta.", "danger")
+        return redirect(url_for("calendar.index"))
+
     token_url = "https://oauth2.googleapis.com/token"
     data = {
         "code": code,
@@ -118,13 +125,23 @@ def callback():
         "grant_type": "authorization_code",
     }
 
-    r = requests.post(token_url, data=data, timeout=15)
-    if r.status_code != 200:
-        current_app.logger.warning("Google token exchange failed: %s | %s", r.status_code, r.text[:500])
-        flash("No se pudo obtener token desde Google (revisa credenciales y redirect URI).", "danger")
+    try:
+        response = requests.post(token_url, data=data, timeout=15)
+    except requests.RequestException as ex:
+        current_app.logger.exception("Google token exchange request failed: %s", ex)
+        flash("No se pudo conectar con Google para obtener el token.", "danger")
         return redirect(url_for("calendar.index"))
 
-    payload = r.json()
+    if response.status_code != 200:
+        current_app.logger.warning(
+            "Google token exchange failed: %s | %s",
+            response.status_code,
+            response.text[:500],
+        )
+        flash("No se pudo obtener el token desde Google.", "danger")
+        return redirect(url_for("calendar.index"))
+
+    payload = response.json()
 
     access_token = payload.get("access_token")
     refresh_token = payload.get("refresh_token")
@@ -135,10 +152,9 @@ def callback():
         flash("Google no entregó access_token.", "danger")
         return redirect(url_for("calendar.index"))
 
-    expiry = None
+    token_expiry = None
     if isinstance(expires_in, int):
-        # Guardamos NAIVE UTC
-        expiry = datetime.utcnow().replace(microsecond=0) + timedelta(seconds=expires_in)
+        token_expiry = datetime.utcnow().replace(microsecond=0) + timedelta(seconds=expires_in)
 
     token = GoogleToken.query.filter_by(user_id=current_user.id).first()
     if not token:
@@ -146,7 +162,7 @@ def callback():
             user_id=current_user.id,
             access_token=access_token,
             refresh_token=refresh_token,
-            token_expiry=expiry,
+            token_expiry=token_expiry,
             scopes=scope,
         )
         db.session.add(token)
@@ -154,12 +170,12 @@ def callback():
         token.access_token = access_token
         if refresh_token:
             token.refresh_token = refresh_token
-        token.token_expiry = expiry
+        token.token_expiry = token_expiry
         token.scopes = scope
 
     db.session.commit()
 
-    flash("✅ Google Calendar conectado correctamente.", "success")
+    flash("Google Calendar conectado correctamente.", "success")
     return redirect(url_for("calendar.index"))
 
 

@@ -5,7 +5,7 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 
-# Cargar .env ANTES de importar Config (import-time)
+# Cargar variables del .env antes de importar Config
 load_dotenv()
 
 from flask import Flask, redirect, url_for  # noqa: E402
@@ -20,8 +20,12 @@ def create_app() -> Flask:
     app.config.from_object(Config)
 
     # ------------------------------------------------------
-    # Normalizar SQLite solo si efectivamente estamos en SQLite
-    # (En Postgres NO tocamos la URI)
+    # Asegurar carpeta instance
+    # ------------------------------------------------------
+    Path(app.instance_path).mkdir(parents=True, exist_ok=True)
+
+    # ------------------------------------------------------
+    # Normalizar SQLite solo si realmente se está usando SQLite
     # ------------------------------------------------------
     uri = (app.config.get("SQLALCHEMY_DATABASE_URI") or "").strip()
     if uri.startswith("sqlite:///") and not uri.startswith("sqlite:////"):
@@ -31,8 +35,8 @@ def create_app() -> Flask:
         app.config["SQLALCHEMY_DATABASE_URI"] = f"sqlite:///{db_path.as_posix()}"
 
     # ------------------------------------------------------
-    # Upload path (on-premise friendly)
-    # - Acepta UPLOAD_DIR o UPLOAD_PATH (compat)
+    # Upload path
+    # - Si es relativo, se resuelve dentro de instance/
     # ------------------------------------------------------
     upload_cfg = (
         app.config.get("UPLOAD_PATH")
@@ -45,6 +49,9 @@ def create_app() -> Flask:
         upload_path = Path(app.instance_path) / upload_path
 
     upload_path.mkdir(parents=True, exist_ok=True)
+    (upload_path / "generated").mkdir(parents=True, exist_ok=True)
+    (upload_path / "templates").mkdir(parents=True, exist_ok=True)
+
     app.config["UPLOAD_PATH"] = upload_path
 
     # ------------------------------------------------------
@@ -78,7 +85,7 @@ def create_app() -> Flask:
     app.register_blueprint(calendar_bp)
 
     # ------------------------------------------------------
-    # Seed admin (NO debe botar la app)
+    # Admin inicial seguro
     # ------------------------------------------------------
     with app.app_context():
         _ensure_admin_user_safe()
@@ -94,11 +101,8 @@ def create_app() -> Flask:
 
 def _ensure_admin_user_safe() -> None:
     """
-    Garantiza un usuario admin para dev / primera puesta en marcha.
-
-    Reglas:
-    - Si no hay tablas o la DB aún no está lista, NO debe reventar el arranque.
-    - Usa ADMIN_EMAIL y ADMIN_PASSWORD desde .env
+    Garantiza un usuario administrador sin romper el arranque
+    si la base todavía no está lista o las tablas no existen.
     """
     try:
         from sqlalchemy import inspect
@@ -106,7 +110,6 @@ def _ensure_admin_user_safe() -> None:
 
         from .models import User
 
-        # Si aún no existen tablas, salimos (no rompemos arranque)
         try:
             inspector = inspect(db.engine)
             if "user" not in inspector.get_table_names():
@@ -114,12 +117,12 @@ def _ensure_admin_user_safe() -> None:
         except SQLAlchemyError:
             return
 
+        admin_username = (os.getenv("ADMIN_USERNAME") or "admin").strip().lower()
         admin_email = (os.getenv("ADMIN_EMAIL") or "").strip().lower()
         admin_password = os.getenv("ADMIN_PASSWORD") or ""
+
         if not admin_email or not admin_password:
             return
-
-        admin_username = "admin"
 
         user = User.query.filter_by(username=admin_username).first()
         if not user:
@@ -156,7 +159,7 @@ def _ensure_admin_user_safe() -> None:
             user.is_active = True
             changed = True
 
-        # En dev: mantener clave del .env siempre vigente
+        # Mantener la clave definida en .env para puesta en marcha inicial
         user.set_password(admin_password)
         changed = True
 
